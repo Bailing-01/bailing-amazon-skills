@@ -1,0 +1,799 @@
+{
+  "schema_version": 1,
+  "name": "neck-care-cosmo-attribute-tree",
+  "description": "颈霜品类 v4 Cosmo-aware 属性词树（bailing 2026-07-18 设计）",
+  "dimensions": {
+    "INGREDIENT_FAMILY": {
+      "purpose": "成分党意图（cosmo: science-led buyer）",
+      "tags": [
+        "vitamin_a",
+        "vitamin_c",
+        "vitamin_e",
+        "vitamin_b3",
+        "peptides",
+        "collagen",
+        "plant_extracts",
+        "exotic_botanical",
+        "fruit_acid",
+        "mineral",
+        "novel_compound",
+        "antioxidant"
+      ],
+      "patterns": {
+        "vitamin_a": [
+          "retinol",
+          "retinal",
+          "retin a",
+          "retinol a",
+          "tretinoin",
+          "adapalene"
+        ],
+        "vitamin_c": [
+          "vitamin c",
+          "ascorbic acid",
+          "sodium ascorbyl phosphate"
+        ],
+        "vitamin_e": [
+          "vitamin e",
+          "tocopherol"
+        ],
+        "vitamin_b3": [
+          "niacinamide",
+          "vitamin b3"
+        ],
+        "peptides": [
+          "peptide",
+          "peptides",
+          "matrixyl",
+          "argireline",
+          "copper peptide",
+          "biopeptide"
+        ],
+        "collagen": [
+          "collagen",
+          "marine collagen",
+          "pro collagen"
+        ],
+        "plant_extracts": [
+          "centella asiatica",
+          "bakuchiol",
+          "hibiscus",
+          "green tea",
+          "vitamin b5",
+          "snail",
+          "aloe",
+          "shea"
+        ],
+        "exotic_botanical": [
+          "amber",
+          "turmeric",
+          "coconut",
+          "cocoa",
+          "argan",
+          "jojoba",
+          "almond"
+        ],
+        "fruit_acid": [
+          "glycolic acid",
+          "lactic acid",
+          "aha",
+          "bha",
+          "salicylic acid"
+        ],
+        "mineral": [
+          "gold",
+          "zinc",
+          "copper",
+          "sodium"
+        ],
+        "novel_compound": [
+          "nad",
+          "snail mucin",
+          "pdrm",
+          "pdrn",
+          "pdrn collagen",
+          "cactus",
+          "snow mushroom"
+        ],
+        "antioxidant": [
+          "vitamin c",
+          "vitamin e",
+          "niacinamide",
+          "resveratrol",
+          "ferulic acid",
+          "coenzyme q10"
+        ]
+      }
+    },
+    "PAIN_SPECIFIC": {
+      "purpose": "痛点意图（cosmo: pain-led buyer）",
+      "tags": [
+        "sagging",
+        "loose_skin",
+        "crepe_texture",
+        "wrinkles",
+        "discoloration",
+        "neck_specific",
+        "body_specific",
+        "loss_of_firmness",
+        "dryness",
+        "aging_visible",
+        "large_pores"
+      ],
+      "patterns": {
+        "sagging": [
+          "sag",
+          "saggy",
+          "sagging",
+          "jowl",
+          "jowls"
+        ],
+        "loose_skin": [
+          "loose",
+          "looseness",
+          "flabby"
+        ],
+        "crepe_texture": [
+          "crepe",
+          "crepey",
+          "crepe texture",
+          "paper thin",
+          "thin skin",
+          "chicken skin"
+        ],
+        "wrinkles": [
+          "wrinkle",
+          "wrinkles",
+          "fine line",
+          "crow feet",
+          "forehead lines",
+          "marionette",
+          "laugh line"
+        ],
+        "discoloration": [
+          "dark spot",
+          "age spot",
+          "sun spot",
+          "hyperpigmentation",
+          "brown spot",
+          "melasma",
+          "dark neck",
+          "black neck"
+        ],
+        "neck_specific": [
+          "turkey neck",
+          "double chin",
+          "tech neck",
+          "neck band",
+          "platysma bands"
+        ],
+        "body_specific": [
+          "crepe body",
+          "crepe arm",
+          "flabby arm",
+          "bat wing",
+          "batwing",
+          "crepe hand",
+          "hand skin"
+        ],
+        "loss_of_firmness": [
+          "lose firmness",
+          "loss of firmness",
+          "soft",
+          "droopy"
+        ],
+        "dryness": [
+          "dry",
+          "dehydrated",
+          "flaky",
+          "rough texture"
+        ],
+        "aging_visible": [
+          "aged",
+          "mature",
+          "older looking",
+          "premature aging"
+        ],
+        "large_pores": [
+          "large pore",
+          "enlarged pore",
+          "big pore"
+        ]
+      }
+    },
+    "FORM_FAMILY": {
+      "purpose": "产品形态意图（cosmo: format-led buyer）",
+      "tags": [
+        "cream_gel",
+        "serum_oil",
+        "stick",
+        "mask_patch",
+        "spray",
+        "tape_strip",
+        "gua_sha_tool",
+        "kit_set",
+        "device",
+        "pen_roll-on",
+        "pump_dropper"
+      ],
+      "patterns": {
+        "cream_gel": [
+          "cream",
+          "gel",
+          "lotion",
+          "gel-cream",
+          "cream-gel"
+        ],
+        "serum_oil": [
+          "serum",
+          "oil",
+          "essence",
+          "ampoule"
+        ],
+        "stick": [
+          "stick",
+          "solid"
+        ],
+        "mask_patch": [
+          "mask",
+          "patch",
+          "patches",
+          "sheet",
+          "eye patch"
+        ],
+        "spray": [
+          "spray",
+          "mist"
+        ],
+        "tape_strip": [
+          "tape",
+          "strip",
+          "instant lift tape",
+          "lifting tape"
+        ],
+        "gua_sha_tool": [
+          "gua sha",
+          "roller",
+          "jade roller",
+          "massager",
+          "roller"
+        ],
+        "kit_set": [
+          "kit",
+          "set",
+          "bundle",
+          "combo",
+          "collection",
+          "duo"
+        ],
+        "device": [
+          "device",
+          "machine",
+          "rf device",
+          "radio frequency device",
+          "microcurrent"
+        ],
+        "pen_roll-on": [
+          "pen",
+          "roll on",
+          "roll-on",
+          "rollerball",
+          "roller"
+        ],
+        "pump_dropper": [
+          "pump",
+          "dropper",
+          "jar",
+          "tube"
+        ]
+      }
+    },
+    "AREA_FAMILY": {
+      "purpose": "使用部位意图（cosmo: where-used led buyer）",
+      "tags": [
+        "neck",
+        "face",
+        "eye",
+        "body",
+        "chest_decollete",
+        "hand",
+        "multi_area",
+        "full_body"
+      ],
+      "patterns": {
+        "neck": [
+          "neck"
+        ],
+        "face": [
+          "face",
+          "facial",
+          "cheek",
+          "chin"
+        ],
+        "eye": [
+          "eye",
+          "under eye",
+          "undereye"
+        ],
+        "body": [
+          "body",
+          "arms",
+          "arm",
+          "leg",
+          "legs",
+          "stomach",
+          "tummy",
+          "belly",
+          "abdomen"
+        ],
+        "chest_decollete": [
+          "chest",
+          "decollete",
+          "décolleté",
+          "cleavage"
+        ],
+        "hand": [
+          "hand",
+          "hands"
+        ],
+        "multi_area": [
+          "all over",
+          "multi area",
+          "multiple areas"
+        ],
+        "full_body": [
+          "full body"
+        ]
+      }
+    },
+    "AUDIENCE_FAMILY": {
+      "purpose": "人群意图（cosmo: audience-led buyer）",
+      "tags": [
+        "women_universal",
+        "men_universal",
+        "mature_50plus",
+        "youth_universal",
+        "sensitive_skin",
+        "oily_skin",
+        "dry_skin",
+        "combination_skin",
+        "dark_skin",
+        "post_weight_loss",
+        "post_pregnancy",
+        "ethnicity_led",
+        "profession_led"
+      ],
+      "patterns": {
+        "women_universal": [
+          "for women",
+          "women's",
+          "her skin",
+          "her cream",
+          "her firming",
+          "her anti aging",
+          "her glow",
+          "anti aging women",
+          "crepey skin older women",
+          "older women",
+          "for her"
+        ],
+        "men_universal": [
+          "for men",
+          "men's",
+          "for him",
+          "for him/her",
+          "his skin",
+          "his neck"
+        ],
+        "mature_50plus": [
+          "mature",
+          "over 50",
+          "50+",
+          "60",
+          "60s",
+          "over 60",
+          "senior"
+        ],
+        "youth_universal": [
+          "young",
+          "youth",
+          "teen",
+          "adult",
+          "20s"
+        ],
+        "sensitive_skin": [
+          "sensitive",
+          "sensitive skin",
+          "gentle"
+        ],
+        "oily_skin": [
+          "oily",
+          "acne prone",
+          "acne-prone"
+        ],
+        "dry_skin": [
+          "dry",
+          "dry skin"
+        ],
+        "combination_skin": [
+          "combination"
+        ],
+        "dark_skin": [
+          "dark skin",
+          "dark spot",
+          "melanin"
+        ],
+        "post_weight_loss": [
+          "post weight loss",
+          "weight loss skin",
+          "after weight loss"
+        ],
+        "post_pregnancy": [
+          "mommy",
+          "mom",
+          "pregnancy",
+          "post partum",
+          "postpartum"
+        ],
+        "ethnicity_led": [
+          "asian",
+          "caucasian",
+          "african",
+          "hispanic",
+          "latina"
+        ],
+        "profession_led": [
+          "athlete",
+          "runner",
+          "yoga",
+          "swimmer"
+        ]
+      }
+    },
+    "MODIFIER_FAMILY": {
+      "purpose": "修饰/价值主张（cosmo: benefit-led + origin-led）",
+      "tags": [
+        "natural_origin",
+        "clean_beauty",
+        "cruelty_free",
+        "professional_grade",
+        "brand_legacy",
+        "mass_market",
+        "novel_innovation",
+        "instant_results",
+        "long_term_results",
+        "korean_beauty",
+        "japanese_beauty",
+        "fragrance_free",
+        "spf"
+      ],
+      "patterns": {
+        "natural_origin": [
+          "natural",
+          "organic",
+          "plant based",
+          "plant-based",
+          "botanical",
+          "pure"
+        ],
+        "clean_beauty": [
+          "clean",
+          "clean beauty",
+          "non toxic",
+          "non-toxic",
+          "free from"
+        ],
+        "cruelty_free": [
+          "cruelty free",
+          "cruelty-free",
+          "not tested on animals",
+          "vegan"
+        ],
+        "professional_grade": [
+          "professional",
+          "clinical",
+          "clinical grade",
+          "medical grade",
+          "dermatologist"
+        ],
+        "brand_legacy": [
+          "luxury",
+          "premium",
+          "high end",
+          "high-end",
+          "classic",
+          "heritage"
+        ],
+        "mass_market": [
+          "drugstore",
+          "affordable",
+          "cheap",
+          "value"
+        ],
+        "novel_innovation": [
+          "innovative",
+          "new",
+          "breakthrough",
+          "patent",
+          "exclusive"
+        ],
+        "instant_results": [
+          "instant",
+          "immediate",
+          "fast",
+          "quick acting"
+        ],
+        "long_term_results": [
+          "overnight",
+          "all day",
+          "daily",
+          "long term",
+          "cumulative"
+        ],
+        "korean_beauty": [
+          "korean",
+          "k beauty",
+          "k-beauty"
+        ],
+        "japanese_beauty": [
+          "japanese",
+          "j beauty",
+          "j-beauty"
+        ],
+        "fragrance_free": [
+          "fragrance free",
+          "unscented",
+          "no scent",
+          "fragrance-free"
+        ],
+        "spf": [
+          "spf",
+          "sun protection",
+          "sunscreen"
+        ]
+      }
+    },
+    "BENEFIT_FAMILY": {
+      "purpose": "功效意图（cosmo: outcome-led）",
+      "tags": [
+        "firming",
+        "anti_aging",
+        "moisturizing",
+        "smoothing",
+        "brightening",
+        "circulation",
+        "plumping",
+        "rejuvenation",
+        "defense",
+        "exfoliation"
+      ],
+      "patterns": {
+        "firming": [
+          "firming",
+          "firm",
+          "lift",
+          "tightening",
+          "tighten"
+        ],
+        "anti_aging": [
+          "anti aging",
+          "anti-aging",
+          "age defy",
+          "age-defying",
+          "anti age"
+        ],
+        "moisturizing": [
+          "hydrating",
+          "hydration",
+          "moisturizing",
+          "moisture"
+        ],
+        "smoothing": [
+          "smoothing",
+          "smooth",
+          "soften"
+        ],
+        "brightening": [
+          "brightening",
+          "brighten",
+          "glow",
+          "radiance",
+          "radiant"
+        ],
+        "circulation": [
+          "circulation",
+          "blood flow",
+          "lymphatic"
+        ],
+        "plumping": [
+          "plumping",
+          "plump",
+          "volumizing"
+        ],
+        "rejuvenation": [
+          "rejuvenate",
+          "rejuvenation",
+          "renew",
+          "renewal",
+          "restore",
+          "revive"
+        ],
+        "defense": [
+          "protect",
+          "defense",
+          "barrier",
+          "antioxidant"
+        ],
+        "exfoliation": [
+          "exfoliating",
+          "exfoliate",
+          "exfoliant",
+          "scrub"
+        ]
+      }
+    },
+    "PURCHASE_CONTEXT": {
+      "purpose": "购买场景（cosmo: context-of-purchase）",
+      "tags": [
+        "subscribe_and_save",
+        "gift_packaging",
+        "travel_size",
+        "bulk_size",
+        "auto_delivery"
+      ],
+      "patterns": {
+        "subscribe_and_save": [
+          "subscribe",
+          "subscription",
+          "subscribe and save"
+        ],
+        "gift_packaging": [
+          "gift",
+          "present",
+          "box"
+        ],
+        "travel_size": [
+          "travel",
+          "mini",
+          "sample",
+          "travel size"
+        ],
+        "bulk_size": [
+          "bulk",
+          "value size",
+          "family size",
+          "large size",
+          "8 oz",
+          "16 oz"
+        ],
+        "auto_delivery": [
+          "auto",
+          "auto ship",
+          "auto-delivery",
+          "refill"
+        ]
+      }
+    },
+    "TEMPORAL": {
+      "purpose": "季节/事件（cosmo: temporal intent）",
+      "tags": [
+        "fourth_quarter",
+        "summer_specific",
+        "summer_to_winter",
+        "wedding_event"
+      ],
+      "patterns": {
+        "fourth_quarter": [
+          "holiday",
+          "christmas",
+          "new year",
+          "thanksgiving",
+          "black friday",
+          "cyber monday"
+        ],
+        "summer_specific": [
+          "summer",
+          "vacation",
+          "beach"
+        ],
+        "summer_to_winter": [
+          "transition",
+          "seasonal",
+          "spring"
+        ],
+        "wedding_event": [
+          "wedding",
+          "bride",
+          "prom",
+          "formal",
+          "special occasion"
+        ]
+      }
+    },
+    "ORIGIN": {
+      "purpose": "产地/文化（cosmo: culture-led）",
+      "tags": [
+        "korean",
+        "japanese",
+        "european",
+        "american",
+        "australian"
+      ],
+      "patterns": {
+        "korean": [
+          "korean",
+          "k-beauty",
+          "k beauty"
+        ],
+        "japanese": [
+          "japanese",
+          "j-beauty"
+        ],
+        "european": [
+          "europe",
+          "european",
+          "french",
+          "italian",
+          "german"
+        ],
+        "american": [
+          "american",
+          "usa made"
+        ],
+        "australian": [
+          "australian",
+          "au"
+        ]
+      }
+    },
+    "GENERIC": {
+      "purpose": "通用/异常（review/how-to/语言）",
+      "tags": [
+        "healthcare_provider",
+        "professional_use",
+        "review_keyword",
+        "comparison_keyword",
+        "how_to",
+        "language_other"
+      ],
+      "patterns": {
+        "healthcare_provider": [
+          "medical",
+          "physician",
+          "dermatologist"
+        ],
+        "professional_use": [
+          "salon",
+          "spa",
+          "esthetician",
+          "esthetic"
+        ],
+        "review_keyword": [
+          "review",
+          "reviews",
+          "comments",
+          "testimonial"
+        ],
+        "comparison_keyword": [
+          "vs",
+          "comparison",
+          "versus",
+          "alternative",
+          "alternatives"
+        ],
+        "how_to": [
+          "how to",
+          "how",
+          "method",
+          "tutorial"
+        ],
+        "language_other": [
+          "espanol",
+          "francais",
+          "deutsch",
+          "for spanish speakers"
+        ]
+      }
+    }
+  }
+}
