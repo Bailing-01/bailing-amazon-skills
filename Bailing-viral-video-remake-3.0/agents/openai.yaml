@@ -1,0 +1,4 @@
+interface:
+  display_name: "星河爆款短视频二创2.0"
+  short_description: "Analyze a viral reference video, adapt its voiceover rhythm, copy, stickers, sound effects, shot plan, and camera style, then generate a Seedance 2.0 Fast MP4."
+  default_prompt: "Analyze my reference short video, correct and adapt the voiceover, adapt the copy and shot plan for my product, create a director storyboard, and generate a reference-duration 9:16 Seedance 2.0 Fast video at 480p, capped at 15 seconds."
