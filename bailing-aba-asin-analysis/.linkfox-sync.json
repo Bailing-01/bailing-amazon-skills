@@ -1,0 +1,10 @@
+{
+  "eventId" : "20e3a34e-b6e2-41d0-ae77-5fc0c6e7c041",
+  "operation" : "UPSERT",
+  "groupId" : "2062515382837182466",
+  "memberId" : "2062515382837182467",
+  "slug" : "bailing-aba-asin-analysis",
+  "agentId" : null,
+  "version" : 1786773420635,
+  "syncedAt" : "2026-08-15T05:57:01.538591856Z"
+}
