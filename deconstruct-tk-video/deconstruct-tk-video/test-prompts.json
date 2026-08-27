@@ -1,0 +1,17 @@
+[
+  {
+    "id": 1,
+    "prompt": "使用 $deconstruct-tk-video 处理一个本地 MP4，只完成第一步内容提取。",
+    "expected": "不连接任何下载服务，直接校验本地文件并进入 FFprobe、转写和抽帧。"
+  },
+  {
+    "id": 2,
+    "prompt": "使用 $deconstruct-tk-video 拆解一个可由 gallery-dl 正常下载的公开 TikTok /video/ 链接。",
+    "expected": "优先使用 gallery-dl；下载成功并校验可读视频后进入原分析缓存流程。"
+  },
+  {
+    "id": 3,
+    "prompt": "在 Windows 使用 $deconstruct-tk-video 处理公开 TikTok 视频；gallery-dl 返回 403 Forbidden、JavaScript challenge 或 No results。",
+    "expected": "自动切换无 Cookie 的公开备用通道，只传递公开 URL；核对视频 ID、HTTPS、文件大小和 FFprobe。备用也失败时保留任务目录、给出两段失败原因并请求本地视频。"
+  }
+]

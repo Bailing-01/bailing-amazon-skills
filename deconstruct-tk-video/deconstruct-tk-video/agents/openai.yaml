@@ -1,0 +1,4 @@
+interface:
+  display_name: "最新104｜TK视频拆解"
+  short_description: "提取并证据化拆解单条或批量TK视频，沉淀候选复用元素与评分"
+  default_prompt: "Use $deconstruct-tk-video to transcribe and evidence-deconstruct these TikTok videos."

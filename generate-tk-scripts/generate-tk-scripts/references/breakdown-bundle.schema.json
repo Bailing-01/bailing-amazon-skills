@@ -1,0 +1,222 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.codex/skills/generate-tk-scripts/breakdown-bundle.schema.json",
+  "title": "TK breakdown bundle v1",
+  "type": "object",
+  "required": [
+    "pipeline_id",
+    "artifact_type",
+    "schema_version",
+    "batch_confirmation",
+    "videos"
+  ],
+  "properties": {
+    "pipeline_id": {
+      "const": "tk-content-pipeline/v1"
+    },
+    "artifact_type": {
+      "const": "breakdown_bundle"
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "generated_at": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_manifest": {
+      "type": ["object", "string", "null"]
+    },
+    "batch_confirmation": {
+      "type": "object",
+      "properties": {
+        "step1_confirmed": {
+          "const": true
+        },
+        "step2_completed": {
+          "const": true
+        },
+        "step2_confirmed": {
+          "const": true
+        }
+      },
+      "anyOf": [
+        {
+          "required": ["step1_confirmed", "step2_completed"]
+        },
+        {
+          "required": ["step2_confirmed"]
+        }
+      ],
+      "additionalProperties": true
+    },
+    "videos": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/video_breakdown_item"
+      }
+    }
+  },
+  "additionalProperties": true,
+  "$defs": {
+    "video_identity": {
+      "type": "object",
+      "required": ["video_id"],
+      "properties": {
+        "video_id": {
+          "type": ["string", "integer"],
+          "minLength": 1
+        },
+        "source_url": {
+          "type": ["string", "null"]
+        },
+        "local_path": {
+          "type": ["string", "null"]
+        },
+        "duration_seconds": {
+          "type": ["number", "null"],
+          "minimum": 0
+        }
+      },
+      "additionalProperties": true
+    },
+    "timeline": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    },
+    "hook": {
+      "type": "object",
+      "required": [
+        "original_copy",
+        "optimized_copy",
+        "key_changes",
+        "intended_retention_effect"
+      ],
+      "properties": {
+        "original_copy": {
+          "type": "string",
+          "minLength": 1
+        },
+        "optimized_copy": {
+          "type": "string",
+          "minLength": 1
+        },
+        "key_changes": {
+          "type": ["string", "array"],
+          "minLength": 1,
+          "minItems": 1
+        },
+        "intended_retention_effect": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": true
+    },
+    "video_breakdown": {
+      "type": "object",
+      "required": [
+        "underlying_logic",
+        "hook_0_3s",
+        "audience",
+        "pain",
+        "belief_and_action",
+        "transferable_logic"
+      ],
+      "properties": {
+        "underlying_logic": {
+          "type": ["string", "object"],
+          "minLength": 1
+        },
+        "hook_0_3s": {
+          "$ref": "#/$defs/hook"
+        },
+        "audience": {
+          "type": ["string", "object", "array"]
+        },
+        "pain": {
+          "type": ["string", "object", "array"]
+        },
+        "belief_and_action": {
+          "type": ["string", "object", "array"]
+        },
+        "transferable_logic": {
+          "type": ["string", "object", "array"]
+        }
+      },
+      "additionalProperties": true
+    },
+    "video_breakdown_item": {
+      "type": "object",
+      "required": ["video_breakdown"],
+      "properties": {
+        "video": {
+          "$ref": "#/$defs/video_identity"
+        },
+        "source_video": {
+          "$ref": "#/$defs/video_identity"
+        },
+        "timeline": {
+          "$ref": "#/$defs/timeline"
+        },
+        "step1_extraction": {
+          "type": "object",
+          "properties": {
+            "timeline": {
+              "$ref": "#/$defs/timeline"
+            }
+          },
+          "additionalProperties": true
+        },
+        "video_breakdown": {
+          "$ref": "#/$defs/video_breakdown"
+        },
+        "transcript": {
+          "type": "object"
+        },
+        "frames": {
+          "type": "object"
+        },
+        "elements": {
+          "type": "array"
+        },
+        "scores": {
+          "type": "object"
+        },
+        "duplicate_cluster": {
+          "type": ["object", "null"]
+        },
+        "step2_base_row": {
+          "type": ["object", "null"]
+        }
+      },
+      "allOf": [
+        {
+          "anyOf": [
+            {"required": ["video"]},
+            {"required": ["source_video"]}
+          ]
+        },
+        {
+          "anyOf": [
+            {"required": ["timeline"]},
+            {
+              "required": ["step1_extraction"],
+              "properties": {
+                "step1_extraction": {
+                  "required": ["timeline"]
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "additionalProperties": true
+    }
+  }
+}

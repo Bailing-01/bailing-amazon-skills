@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tk-content-pipeline/v1/account-manifest.schema.json",
+  "title": "TikTok Account Manifest",
+  "type": "object",
+  "required": ["pipeline_id", "artifact_type", "generated_at", "account", "selection", "videos"],
+  "properties": {
+    "pipeline_id": {"const": "tk-content-pipeline/v1"},
+    "artifact_type": {"const": "account_manifest"},
+    "generated_at": {"type": "string", "format": "date-time"},
+    "account": {"$ref": "#/$defs/account"},
+    "selection": {
+      "type": "object",
+      "required": ["days", "top", "metric", "cache_status"],
+      "properties": {
+        "days": {"type": "integer", "minimum": 1},
+        "top": {"type": "integer", "minimum": 1},
+        "metric": {"const": "plays"},
+        "cache_status": {"enum": ["hit", "miss", "refresh", "scan_failed"]}
+      },
+      "additionalProperties": false
+    },
+    "videos": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/video"}
+    }
+  },
+  "$defs": {
+    "account": {
+      "type": "object",
+      "required": ["platform", "handle", "profile_url"],
+      "properties": {
+        "platform": {"const": "tiktok"},
+        "handle": {"type": "string", "minLength": 1},
+        "profile_url": {"type": "string", "format": "uri"}
+      },
+      "additionalProperties": false
+    },
+    "metrics": {
+      "type": "object",
+      "required": ["plays", "likes", "comments", "shares"],
+      "properties": {
+        "plays": {"type": ["integer", "null"], "minimum": 0},
+        "likes": {"type": ["integer", "null"], "minimum": 0},
+        "comments": {"type": ["integer", "null"], "minimum": 0},
+        "shares": {"type": ["integer", "null"], "minimum": 0}
+      },
+      "additionalProperties": false
+    },
+    "acquisition": {
+      "type": "object",
+      "required": ["status", "error"],
+      "properties": {
+        "status": {"enum": ["downloaded", "cached", "failed"]},
+        "error": {"type": ["string", "null"]}
+      },
+      "additionalProperties": false
+    },
+    "video": {
+      "type": "object",
+      "required": ["video_id", "source_url", "local_path", "published_at", "metrics", "rank", "account", "acquisition"],
+      "properties": {
+        "video_id": {"type": "string", "pattern": "^[0-9]+$"},
+        "source_url": {"type": "string", "format": "uri"},
+        "local_path": {"type": ["string", "null"]},
+        "published_at": {"type": "string", "format": "date-time"},
+        "metrics": {"$ref": "#/$defs/metrics"},
+        "rank": {"type": "integer", "minimum": 1},
+        "account": {"$ref": "#/$defs/account"},
+        "acquisition": {"$ref": "#/$defs/acquisition"}
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
