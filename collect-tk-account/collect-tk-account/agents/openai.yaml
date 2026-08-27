@@ -1,4 +1,0 @@
-interface:
-  display_name: "最新103｜TK账号采集"
-  short_description: "采集TikTok账号近30天Top视频，下载原片并输出标准交接清单"
-  default_prompt: "使用 $collect-tk-account 采集公开TikTok账号近30天Top视频，下载原片并输出 account_manifest.json。"

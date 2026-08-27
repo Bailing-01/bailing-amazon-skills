@@ -1,4 +1,0 @@
-interface:
-  display_name: "最新107｜田哥哥tiktok视频工作流4.0"
-  short_description: "串联TK采集、证据拆解、素材沉淀与六版或九版新脚本生成及飞书同步"
-  default_prompt: "使用 $tiangege-tiktok-video-workflow-4-0 完成采集、拆解、素材沉淀与默认六版脚本；仅在我明确授权时同步飞书。"
