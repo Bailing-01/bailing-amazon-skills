@@ -1,0 +1,4 @@
+interface:
+  display_name: "最新105｜TK素材沉淀"
+  short_description: "将账号采集与视频拆解结果批量幂等沉淀到飞书多维表格素材库"
+  default_prompt: "使用 $archive-tk-materials 将采集和拆解 JSON 幂等写入飞书 01 至 03 素材表。"

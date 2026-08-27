@@ -1,0 +1,31 @@
+{
+  "logical_table": "step2_breakdowns",
+  "business_key": "拆解ID",
+  "write_mapping": {
+    "breakdown_id": "拆解ID",
+    "original_video_zh_full": "原视频中文内容",
+    "brand": "品牌",
+    "product_category": "产品类别",
+    "duration_seconds": "时长秒",
+    "content_type": "内容类型",
+    "visual_shell_tags": "视觉外壳标签",
+    "first_product_exposure": "产品首次露出",
+    "audience_level_1": "人群一级标签",
+    "audience_level_2": "人群二级标签",
+    "pain_tags": "痛点标签",
+    "depositable_modules": "可沉淀模块",
+    "primary_tactics": "主打法标签",
+    "underlying_purchase_logic": "底层购买逻辑",
+    "product_bridge_logic": "产品承接逻辑",
+    "element_coordination": "元素协同",
+    "trust_evidence_tags": "信任证据标签",
+    "action_trigger_tags": "行动触发标签",
+    "oxy_transfer_method": "OXY迁移方式",
+    "breakdown_usable_status": "拆解可用状态",
+    "hook_score": "Hook评分",
+    "pain_score": "痛点评分",
+    "trust_conversion_score": "信任与转化评分",
+    "transferability_score": "可迁移性评分"
+  },
+  "computed_read_only_fields": ["综合评分", "学习价值"]
+}
