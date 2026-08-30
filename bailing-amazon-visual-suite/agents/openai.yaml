@@ -1,0 +1,6 @@
+interface:
+  display_name: "Bailing亚马逊主副图A+4.0"
+  short_description: "一次性生成亚马逊主图、副图和A+整套跨境商业视觉素材"
+  default_prompt: "Use $bailing-amazon-visual-suite to create a complete Amazon image suite for this product."
+policy:
+  allow_implicit_invocation: true

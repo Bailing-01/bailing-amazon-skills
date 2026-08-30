@@ -1,0 +1,4 @@
+interface:
+  display_name: "Bailing场景图生成4.0"
+  short_description: "根据产品风格、使用场景与模特需求生成8张方形场景图"
+  default_prompt: "Use $bailing-scene-image-generator to generate 8 square product scene images from my uploaded product photos."
