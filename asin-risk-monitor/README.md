@@ -32,3 +32,6 @@ python3 scripts/diff_neg_reviews.py daily/neg_reviews_old.csv daily/neg_reviews_
 
 ## 待提供信息
 开始填报至少需要：**1 个 ASIN + 店铺 + marketplace 列表**，最好同时提供 SKU、父 ASIN、核心关键词和可核验的数据来源。
+
+## 新手介绍
+浏览器打开 [`intro.html`](./intro.html)：这是什么、怎么用、五项检查含义。
