@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import csv
 import html
+import json
 import math
 import re
 import statistics
@@ -424,40 +425,125 @@ def build_insights(rows: List[Dict[str, Any]], aggs: Dict[str, List], meta: Dict
 
 
 # ---------------------------------------------------------------------------
-# HTML
+# HTML (aligned to linkfox-report-generator template-analysis.html style)
 # ---------------------------------------------------------------------------
 
-def svg_bar(items: List[Tuple[str, float]], width: int = 560, bar_h: int = 18, gap: int = 6) -> str:
+_TEMPLATE_CSS = """
+:root{--color-bg:#fff;--color-surface:#fff;--color-border:#e8eaed;--color-text-primary:#1a1a2e;--color-text-secondary:#5a5a72;--color-text-muted:#8e8ea0;--color-accent:#4f46e5;--color-accent-light:#eef2ff;--sentiment-positive:#10b981;--sentiment-positive-bg:#ecfdf5;--sentiment-neutral:#f59e0b;--sentiment-neutral-bg:#fffbeb;--sentiment-negative:#ef4444;--sentiment-negative-bg:#fef2f2;--priority-high:#ef4444;--priority-medium:#f59e0b;--priority-low:#6b7280;--space-xs:4px;--space-sm:8px;--space-md:16px;--space-lg:24px;--space-xl:32px;--space-2xl:48px;--font-sans:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;--font-mono:"SF Mono","Fira Code","Consolas",monospace;--text-xs:12px;--text-sm:13px;--text-base:14px;--text-lg:16px;--text-xl:20px;--text-2xl:24px;--text-3xl:32px;--radius-sm:6px;--radius-md:10px;--radius-lg:14px;--shadow-sm:0 1px 3px rgba(0,0,0,.04),0 1px 2px rgba(0,0,0,.06);--shadow-md:0 4px 12px rgba(0,0,0,.06),0 2px 4px rgba(0,0,0,.04)}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{width:100%;overflow-x:hidden}
+body{font-family:var(--font-sans);font-size:var(--text-base);line-height:1.6;color:var(--color-text-primary);background:var(--color-bg);-webkit-font-smoothing:antialiased;width:100%;max-width:100%;overflow-x:hidden}
+.report-container{width:100%;max-width:1200px;margin:0 auto;padding:var(--space-xl) var(--space-lg);display:flex;flex-wrap:wrap;gap:var(--space-xl);align-items:flex-start}
+.report-main{flex:1;min-width:0;padding-right:8px}
+.report-header{background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 50%,#6366f1 100%);border-radius:var(--radius-lg);padding:var(--space-xl);margin-bottom:var(--space-lg);color:#fff}
+.report-header h1{font-size:clamp(18px,5vw,32px);font-weight:700;color:#fff;margin-bottom:var(--space-xs);word-wrap:break-word}
+.report-header .report-subtitle{font-size:clamp(13px,2vw,16px);color:rgba(255,255,255,.8)}
+.report-header .report-meta{font-size:var(--text-xs);color:rgba(255,255,255,.6);margin-top:var(--space-xs)}
+.kpi-grid{display:flex;flex-wrap:wrap;gap:var(--space-sm);margin-bottom:var(--space-lg);padding:var(--space-sm) 0;border-bottom:1px solid var(--color-border)}
+.kpi-card{display:flex;align-items:baseline;gap:var(--space-sm);padding:var(--space-sm) var(--space-md);flex:0 1 auto;min-width:fit-content}
+.kpi-card .kpi-label{font-size:clamp(11px,2vw,13px);color:var(--color-text-muted);white-space:nowrap}
+.kpi-card .kpi-value{font-size:clamp(14px,3vw,20px);font-weight:600;color:var(--color-text-primary);font-family:var(--font-mono)}
+.content-section{position:relative;background:var(--color-surface);border-radius:var(--radius-md);padding:var(--space-lg) var(--space-xl);margin-bottom:var(--space-lg);box-shadow:var(--shadow-sm)}
+.content-section h2{font-size:clamp(15px,3vw,20px);font-weight:600;color:var(--color-text-primary);margin-bottom:var(--space-md);padding-bottom:var(--space-sm);border-bottom:1px solid var(--color-border)}
+.content-section h3{font-size:clamp(14px,2.5vw,16px);font-weight:600;color:var(--color-text-primary);margin:var(--space-lg) 0 var(--space-sm) 0}
+.content-section h4{font-size:clamp(13px,2vw,14px);font-weight:600;color:var(--color-text-secondary);margin:var(--space-md) 0 var(--space-xs) 0}
+.content-section p{color:var(--color-text-secondary);margin-bottom:var(--space-md);line-height:1.7}
+.data-table-wrapper{overflow-x:auto;margin:var(--space-md) 0;border-radius:var(--radius-sm);-webkit-overflow-scrolling:touch}
+.data-table{min-width:100%;width:max-content;border-collapse:collapse;font-size:var(--text-sm)}
+.data-table thead{position:sticky;top:0;z-index:1}
+.data-table th{background:var(--color-bg);font-weight:600;color:var(--color-text-secondary);padding:var(--space-sm) var(--space-md);text-align:left;border-bottom:2px solid var(--color-border);white-space:nowrap}
+.data-table td{padding:var(--space-sm) var(--space-md);border-bottom:1px solid var(--color-border);color:var(--color-text-primary);vertical-align:middle;white-space:nowrap}
+.data-table tbody tr:nth-child(even){background:#fafbfc}
+.data-table tbody tr:hover{background:var(--color-accent-light)}
+.data-table .num{text-align:right;font-family:var(--font-mono);font-size:var(--text-xs)}
+.tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:var(--text-xs);font-weight:500;line-height:1.6;vertical-align:middle}
+.tag-positive{background:var(--sentiment-positive-bg);color:var(--sentiment-positive)}
+.tag-negative{background:var(--sentiment-negative-bg);color:var(--sentiment-negative)}
+.tag-accent{background:var(--color-accent-light);color:var(--color-accent)}
+.tag-muted{background:var(--color-bg);color:var(--color-text-muted)}
+.insight-list{list-style:none;margin:var(--space-md) 0}
+.insight-list li{padding:var(--space-sm) var(--space-md);margin-bottom:var(--space-sm);background:var(--color-bg);border-radius:var(--radius-sm);font-size:var(--text-sm);color:var(--color-text-secondary);position:relative;padding-left:var(--space-xl)}
+.insight-list li::before{content:'';position:absolute;left:var(--space-md);top:50%;transform:translateY(-50%);width:6px;height:6px;border-radius:50%;background:var(--color-accent)}
+.insight-list li.priority-high::before{background:var(--priority-high)}
+.insight-list li.priority-medium::before{background:var(--priority-medium)}
+.insight-list li.priority-low::before{background:var(--priority-low)}
+.summary-box{background:var(--color-accent-light);border-left:4px solid var(--color-accent);border-radius:var(--radius-md);padding:var(--space-lg) var(--space-xl);margin:var(--space-lg) 0}
+.summary-box h4{color:var(--color-accent);font-size:var(--text-lg);font-weight:600;margin-bottom:var(--space-sm)}
+.summary-box p{font-size:var(--text-base);color:var(--color-text-secondary);line-height:1.7}
+.chart-container{width:100%;max-width:100%;overflow-x:auto;margin:var(--space-md) auto;border-radius:var(--radius-sm);min-height:200px;text-align:center}
+.chart-container canvas{display:block;margin:0 auto;max-width:100%;height:auto;width:auto}
+.chart-row{display:grid;gap:var(--space-md);margin:var(--space-md) 0}
+.chart-row.cols-2{grid-template-columns:repeat(2,1fr)}
+@media(max-width:768px){.chart-row.cols-2{grid-template-columns:1fr}}
+.report-footer{text-align:center;padding:var(--space-xl) 0 var(--space-md);font-size:var(--text-xs);color:var(--color-text-muted);border-top:1px solid var(--color-border);margin-top:var(--space-xl)}
+.data-source{font-size:var(--text-xs);color:var(--color-text-muted);margin-top:var(--space-md);padding-top:var(--space-sm);border-top:1px dashed var(--color-border)}
+.data-source .ds-label{font-weight:600}
+.data-source .ds-tool{background:var(--color-bg);padding:1px 6px;border-radius:4px;font-family:var(--font-mono);font-size:11px;color:var(--color-text-secondary)}
+.data-source .ds-time{color:var(--color-text-muted)}
+.data-source .ds-computed{margin-top:var(--space-xs);font-size:11px;color:var(--color-text-muted);font-style:italic}
+.toc-sidebar{width:220px;flex-shrink:0;position:fixed;right:var(--space-lg);top:var(--space-lg);height:auto;max-height:calc(100vh - 48px);background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:var(--space-md) 0;font-size:var(--text-sm);overflow-y:auto;z-index:10;max-width:0;overflow:hidden;transition:max-width .3s ease,padding .3s ease}
+.toc-sidebar:hover{max-width:220px;padding:var(--space-md) 0}
+.toc-sidebar::-webkit-scrollbar{width:4px}
+.toc-sidebar::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:2px}
+.toc-sidebar::-webkit-scrollbar-track{background:transparent}
+.toc-sidebar-title{font-size:var(--text-xs);font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--color-text-muted);padding:0 var(--space-lg) var(--space-md)}
+.toc-sidebar ul{list-style:none;margin:0;padding:0}
+.toc-sidebar li a{display:block;padding:var(--space-sm) var(--space-lg);color:var(--color-text-secondary);text-decoration:none;font-size:var(--text-sm);border-radius:var(--radius-sm);margin:2px var(--space-sm);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:background .15s,color .15s;border-left:3px solid transparent}
+.toc-sidebar li a:hover{background:var(--color-accent-light);color:var(--color-accent)}
+.toc-sidebar li a.active{background:var(--color-accent-light);color:var(--color-accent);font-weight:600;border-left-color:var(--color-accent)}
+.toc-sidebar .toc-sub{list-style:none;margin:0;padding:0 0 0 12px}
+.toc-sidebar .toc-sub li a{font-size:var(--text-xs);padding:4px var(--space-md) 4px var(--space-lg);color:var(--color-text-muted)}
+.toc-sidebar::before{content:'\\1F4C1';position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:20px;opacity:.5;transition:opacity .3s ease;white-space:nowrap}
+.toc-sidebar:hover::before{opacity:0}
+.progress-bar-wrapper{margin:var(--space-xs) 0}
+.progress-bar-label{display:flex;justify-content:space-between;font-size:var(--text-xs);color:var(--color-text-secondary);margin-bottom:2px}
+.progress-bar{height:6px;background:var(--color-bg);border-radius:3px;overflow:hidden}
+.progress-bar .fill{height:100%;border-radius:3px;background:var(--color-accent);transition:width .3s ease}
+@media(max-width:1200px){.toc-sidebar{display:none}.report-container{display:block}}
+@media(max-width:600px){.report-container{padding:var(--space-md)}}
+"""
+
+_CANVAS_JS = """
+var DEFAULT_PALETTE=['#4f46e5','#06b6d4','#8b5cf6','#f59e0b','#10b981','#ef4444','#ec4899','#6366f1'];
+function _normSeries(a,b){var l,d;if(Array.isArray(a)){l=a;d=b}else if(a&&typeof a==='object'){l=a.labels;d=a.datasets}d=(d||[]).map(function(s,i){var o=s||{};return{label:o.label||o.name||('系列'+(i+1)),values:o.data||o.values||[],color:o.color||(o.colors&&o.colors.length===1?o.colors[0]:DEFAULT_PALETTE[i%DEFAULT_PALETTE.length])}});return{labels:l||[],datasets:d}}
+function _roundedBar(c,x,y,w,h,r){if(h<=0)return;r=Math.min(r,w/2,h);c.beginPath();c.moveTo(x,y+h);c.lineTo(x,y+r);c.quadraticCurveTo(x,y,x+r,y);c.lineTo(x+w-r,y);c.quadraticCurveTo(x+w,y,x+w,y+r);c.lineTo(x+w,y+h);c.closePath();c.fill()}
+function drawBar(id,arg1,arg2){var cv=document.getElementById(id);if(!cv||!cv.getContext)return;var p=_normSeries(arg1,arg2);var labels=p.labels,datasets=p.datasets;if(labels.length===0||datasets.length===0)return;var ctx=cv.getContext('2d');var W=cv.width,H=cv.height;var pL=60,pR=24,pT=24,pB=64;var cW=W-pL-pR,cH=H-pT-pB;var n=labels.length,m=datasets.length;var gW=cW/n;var bW=Math.min(gW*.72/m,46);var mx=0;datasets.forEach(function(ds){ds.values.forEach(function(v){if(Math.abs(v)>mx)mx=Math.abs(v)})});if(mx===0)mx=1;ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);for(var i=0;i<=5;i++){var y=pT+cH-(cH*i/5);ctx.strokeStyle=i===0?'#cbd5e1':'#eef2f7';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(pL,y);ctx.lineTo(pL+cW,y);ctx.stroke();var tv=mx*i/5;var ts=tv>=10000?(tv/10000).toFixed(1)+'万':tv>=1?tv.toFixed(0):tv.toFixed(2);ctx.fillStyle='#94a3b8';ctx.font='500 11px -apple-system,sans-serif';ctx.textAlign='right';ctx.fillText(ts,pL-8,y+4)}datasets.forEach(function(ds,di){labels.forEach(function(lbl,li){var val=ds.values[li]||0;var bH=(Math.abs(val)/mx)*cH;var ox=(gW-bW*m)/2+di*bW;var x=pL+li*gW+ox;var y=pT+cH-bH;var col=ds.color;var g=ctx.createLinearGradient(x,y,x,y+bH);g.addColorStop(0,col);g.addColorStop(1,col+'cc');ctx.fillStyle=g;_roundedBar(ctx,x+1,y,bW-2,bH,4);if(m===1&&bH>16){ctx.fillStyle='#1e293b';ctx.font='600 10.5px -apple-system,sans-serif';ctx.textAlign='center';var ls=Math.abs(val)>=10000?(val/10000).toFixed(1)+'万':Math.abs(val)>=1?val.toFixed(0):(val*100).toFixed(1)+'%';ctx.fillText(ls,x+(bW-2)/2,y-5)}})});ctx.fillStyle='#475569';ctx.font='500 11px -apple-system,sans-serif';ctx.textAlign='center';labels.forEach(function(lbl,li){ctx.fillText(lbl,pL+li*gW+gW/2,pT+cH+18)})}
+"""
+
+_TOC_JS = """
+document.addEventListener('DOMContentLoaded',function(){var toc=document.getElementById('toc');if(!toc)return;var ul=toc.querySelector('ul');var sections=document.querySelectorAll('.content-section');if(sections.length<2){toc.style.display='none';return}sections.forEach(function(sec,i){var h2=sec.querySelector('h2');if(!h2)return;var id='toc-s-'+i;sec.id=id;var li=document.createElement('li');var a=document.createElement('a');a.href='#'+id;a.textContent=h2.textContent.trim();li.appendChild(a);var h3s=sec.querySelectorAll('h3');if(h3s.length>0){var sub=document.createElement('ul');sub.className='toc-sub';h3s.forEach(function(h3,j){var sid='toc-s-'+i+'-'+j;h3.id=sid;var sli=document.createElement('li');var sa=document.createElement('a');sa.href='#'+sid;sa.textContent=h3.textContent.trim();sli.appendChild(sa);sub.appendChild(sli)});li.appendChild(sub)}ul.appendChild(li)});var links=toc.querySelectorAll('a[href^="#"]');var targets=[];links.forEach(function(a){var el=document.getElementById(a.getAttribute('href').slice(1));if(el)targets.push({link:a,el:el})});function onScroll(){var cur=targets[0];for(var i=0;i<targets.length;i++){if(targets[i].el.getBoundingClientRect().top<=100)cur=targets[i]}links.forEach(function(a){a.classList.remove('active')});if(cur)cur.link.classList.add('active')}window.addEventListener('scroll',onScroll,{passive:true});onScroll();toc.addEventListener('click',function(e){var a=e.target.closest('a[href^="#"]');if(!a)return;var t=document.getElementById(a.getAttribute('href').slice(1));if(t){e.preventDefault();t.scrollIntoView({behavior:'smooth',block:'start'})}})});
+"""
+
+
+def canvas_bar(chart_id, items, height=340):
+    """Returns (html_container, js_init_code) for a Canvas bar chart."""
     if not items:
-        return "<p class='muted'>暂无数据</p>"
-    max_v = max(v for _, v in items) or 1.0
-    label_w = 160
-    chart_w = width - label_w - 70
-    height = len(items) * (bar_h + gap) + 10
-    parts = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" role="img">']
-    for i, (label, val) in enumerate(items):
-        y = i * (bar_h + gap) + 4
-        bw = max(2, int(chart_w * (val / max_v)))
-        safe = html.escape(label[:28] + ("…" if len(label) > 28 else ""))
-        parts.append(
-            f'<text x="0" y="{y + bar_h - 4}" font-size="12" fill="#334155">{safe}</text>'
-            f'<rect x="{label_w}" y="{y}" width="{bw}" height="{bar_h}" rx="3" fill="#3b82f6" opacity="0.85"/>'
-            f'<text x="{label_w + bw + 6}" y="{y + bar_h - 4}" font-size="11" fill="#64748b">{int(val):,}</text>'
-        )
-    parts.append("</svg>")
-    return "\n".join(parts)
+        return "<p style='font-size:13px;color:var(--color-text-muted);'>暂无数据</p>", ""
+    labels = [label[:22] + ("\u2026" if len(label) > 22 else label) for label, _ in items]
+    values = [int(val) for _, val in items]
+    labels_js = json.dumps(labels, ensure_ascii=False)
+    values_js = json.dumps(values)
+    container = '<div class="chart-container"><canvas id="{}" width="1024" height="{}"></canvas></div>'.format(chart_id, height)
+    js = 'drawBar("{}", {}, [{{"label":"搜索量","data":{},"color":"#4f46e5"}}]);'.format(chart_id, labels_js, values_js)
+    return container, js
 
 
-def table_html(headers: List[str], rows: List[List[Any]], max_rows: int = 25) -> str:
-    th = "".join(f"<th>{html.escape(str(h))}</th>" for h in headers)
+def table_html(headers, rows, max_rows=25):
+    th = "".join(
+        '<th{}>{}</th>'.format(' class="num"' if i > 0 else '', html.escape(str(h)))
+        for i, h in enumerate(headers)
+    )
     body = []
     for r in rows[:max_rows]:
-        tds = "".join(f"<td>{html.escape(str(c))}</td>" for c in r)
-        body.append(f"<tr>{tds}</tr>")
+        tds = "".join(
+            '<td{}>{}</td>'.format(' class="num"' if i > 0 else '', html.escape(str(c)))
+            for i, c in enumerate(r)
+        )
+        body.append("<tr>{}</tr>".format(tds))
     more = ""
     if len(rows) > max_rows:
-        more = f"<p class='muted'>仅展示前 {max_rows} 行，完整数据见 Excel。</p>"
-    return f"<table><thead><tr>{th}</tr></thead><tbody>{''.join(body)}</tbody></table>{more}"
+        more = '<p style="font-size:12px;color:var(--color-text-muted);margin-top:8px;">仅展示前 {} 行，完整数据见 Excel。</p>'.format(max_rows)
+    return '<div class="data-table-wrapper"><table class="data-table"><thead><tr>{}</tr></thead><tbody>{}</tbody></table></div>{}'.format(th, "".join(body), more)
 
 
 def render_html(
@@ -474,45 +560,67 @@ def render_html(
     total = meta["total_vol"]
     generated = datetime.now().strftime("%Y-%m-%d %H:%M CST")
 
-    kpi_cards = f"""
-    <div class="kpis">
-      <div class="kpi"><div class="n">{n:,}</div><div class="l">关键词数</div></div>
-      <div class="kpi"><div class="n">{int(total):,}</div><div class="l">总搜索量</div></div>
-      <div class="kpi"><div class="n">{meta['audience_coverage']:.1f}%</div><div class="l">人群覆盖率</div></div>
-      <div class="kpi"><div class="n">{meta['p50']:.0f} / {meta['p90']:.0f}</div><div class="l">搜索量 P50 / P90</div></div>
-      <div class="kpi"><div class="n">{meta['head_share']:.1f}%</div><div class="l">头部4%词量贡献</div></div>
-      <div class="kpi"><div class="n">{meta['fill_dims_ok']}</div><div class="l">填充率≥5%的维数</div></div>
-    </div>
-    """
+    # Canvas chart JS collector
+    canvas_scripts = []
+    _cid = [0]
 
-    fill_rows = [[d, f"{meta['fill_rates'][d]:.1f}%", "⚠ 偏低" if meta["fill_rates"][d] < 5 else "可用"] for d in ATTR_DIMS]
+    def make_bar(items, height=340):
+        _cid[0] += 1
+        cid = "chart_cosmo_{}".format(_cid[0])
+        h, js = canvas_bar(cid, items, height=height)
+        if js:
+            canvas_scripts.append(js)
+        return h
 
+    # KPI cards
+    kpi_cards = (
+        '<div class="kpi-grid">'
+        '<div class="kpi-card"><div class="kpi-label">关键词数</div><div class="kpi-value">{:,}</div></div>'
+        '<div class="kpi-card"><div class="kpi-label">总搜索量</div><div class="kpi-value">{:,}</div></div>'
+        '<div class="kpi-card"><div class="kpi-label">人群覆盖率</div><div class="kpi-value">{:.1f}%</div></div>'
+        '<div class="kpi-card"><div class="kpi-label">P50 / P90</div><div class="kpi-value">{:.0f} / {:.0f}</div></div>'
+        '<div class="kpi-card"><div class="kpi-label">头部4%贡献</div><div class="kpi-value">{:.1f}%</div></div>'
+        '<div class="kpi-card"><div class="kpi-label">可用维数</div><div class="kpi-value">{}</div></div>'
+        '</div>'
+    ).format(n, int(total), meta["audience_coverage"], meta["p50"], meta["p90"], meta["head_share"], meta["fill_dims_ok"])
+
+    # Fill rate table
+    fill_rows = [
+        [d, "{:.1f}%".format(meta["fill_rates"][d]),
+         '<span class="tag tag-negative">偏低</span>' if meta["fill_rates"][d] < 5
+         else '<span class="tag tag-positive">可用</span>']
+        for d in ATTR_DIMS
+    ]
+    fill_table = table_html(["维度", "填充率", "建议"], fill_rows, 20)
+
+    # Dimension sections
     dim_sections = []
     for d in ATTR_DIMS:
         arr = aggs.get(d) or []
         fr = meta["fill_rates"][d]
-        warn = " <span class='warn'>填充率偏低，勿作主战场</span>" if fr < 5 else ""
-        bars = svg_bar([(x["标签"], x["搜索量"]) for x in arr[:12]])
+        warn = ' <span class="tag tag-negative">填充率偏低</span>' if fr < 5 else ""
+        bar_html = make_bar([(x["标签"], x["搜索量"]) for x in arr[:12]])
         tbl = table_html(
             ["标签", "词数", "搜索量(等分)", "中位", "占比%", "Top词"],
             [[x["标签"], x["词数"], int(x["搜索量"]), x["中位搜索量"], x["占比"], x["Top词"]] for x in arr],
             20,
         )
         dim_sections.append(
-            f"<section class='card'><h3>{html.escape(d)} <small>填充率 {fr:.1f}%{warn}</small></h3>"
-            f"<div class='chart'>{bars}</div>{tbl}</section>"
+            '<h3>{} <span style="font-size:12px;font-weight:400;color:var(--color-text-muted);">填充率 {:.1f}%{}</span></h3>{}{}'.format(
+                html.escape(d), fr, warn, bar_html, tbl)
         )
 
-    # head/tail
-    def subset_attr_block(name: str, subset: List[Dict], dims: Sequence[str]) -> str:
+    # Head/tail
+    def subset_attr_block(name, subset, dims):
         blocks = []
         for d in dims:
             dist = attr_distribution(subset, d, 8)
             if not dist:
                 continue
-            bars = svg_bar([(x["标签"], x["搜索量"]) for x in dist[:8]], width=520)
-            blocks.append(f"<h4>{html.escape(d)}</h4><div class='chart'>{bars}</div>")
-        return f"<section class='card'><h3>{html.escape(name)}（n={len(subset)}）</h3>{''.join(blocks) or '<p class=muted>无属性命中</p>'}</section>"
+            bar_html = make_bar([(x["标签"], x["搜索量"]) for x in dist[:8]], height=280)
+            blocks.append("<h4>{}</h4>{}".format(html.escape(d), bar_html))
+        no_data = '<p style="color:var(--color-text-muted);font-size:13px;">无属性命中</p>'
+        return '<h3>{}（n={}）</h3>{}'.format(html.escape(name), len(subset), "".join(blocks) or no_data)
 
     head_html = subset_attr_block(
         "头部流量共性（搜索量前4%）",
@@ -525,7 +633,7 @@ def render_html(
         ["产品形态", "风格属性", "功效", "通用/品类"],
     )
 
-    # co-occurrence
+    # Co-occurrence
     co_blocks = []
     for a, b in (("目标人群", "功效"), ("产品形态", "风格属性"), ("痛点/需求", "功效"), ("修饰/价值", "产品形态")):
         co = cooccurrence(rows, a, b, 15)
@@ -536,8 +644,9 @@ def render_html(
             [[c["标签A"], c["标签B"], int(c["搜索量"]), c["词数"]] for c in co],
             15,
         )
-        co_blocks.append(f"<h4>{html.escape(a)} × {html.escape(b)}</h4>{tbl}")
+        co_blocks.append("<h4>{} \u00d7 {}</h4>{}".format(html.escape(a), html.escape(b), tbl))
 
+    # Blue ocean
     blue = blue_ocean_window(rows, 25)
     blue_tbl = table_html(
         ["关键词", "搜索量", "蓝海度", "竞品数", "推荐行动"],
@@ -545,86 +654,241 @@ def render_html(
         25,
     )
 
-    insight_lis = "".join(f"<li>{html.escape(s)}</li>" for s in insights)
+    # Insights
+    insight_lis = "".join(
+        '<li class="priority-{}">{}</li>'.format(
+            "high" if i < 3 else "medium" if i < 6 else "low",
+            html.escape(s)
+        )
+        for i, s in enumerate(insights)
+    )
 
-    css = """
-    :root { --bg:#0f172a; --card:#1e293b; --text:#e2e8f0; --muted:#94a3b8; --accent:#38bdf8; --warn:#fbbf24; --ok:#4ade80; }
-    * { box-sizing: border-box; }
-    body { margin:0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
-           background: linear-gradient(160deg,#0f172a,#1e293b 40%,#0f172a); color: var(--text); line-height:1.55; }
-    header { padding: 28px 32px 12px; border-bottom: 1px solid #334155; }
-    header h1 { margin:0 0 6px; font-size: 1.6rem; }
-    header .meta { color: var(--muted); font-size: 0.9rem; }
-    main { padding: 20px 32px 48px; max-width: 1100px; margin: 0 auto; }
-    .kpis { display:grid; grid-template-columns: repeat(auto-fit,minmax(140px,1fr)); gap:12px; margin: 16px 0 24px; }
-    .kpi { background: var(--card); border:1px solid #334155; border-radius:12px; padding:14px 16px; }
-    .kpi .n { font-size:1.35rem; font-weight:700; color: var(--accent); }
-    .kpi .l { font-size:0.8rem; color: var(--muted); margin-top:4px; }
-    .card { background: var(--card); border:1px solid #334155; border-radius:14px; padding:18px 20px; margin: 18px 0; }
-    h2 { margin: 28px 0 10px; font-size:1.25rem; border-left: 4px solid var(--accent); padding-left:10px; }
-    h3 { margin: 0 0 12px; font-size:1.05rem; }
-    h3 small { color: var(--muted); font-weight:400; }
-    h4 { margin: 14px 0 8px; color:#cbd5e1; font-size:0.95rem; }
-    table { width:100%; border-collapse: collapse; font-size:0.85rem; margin-top:8px; }
-    th, td { border-bottom:1px solid #334155; padding:6px 8px; text-align:left; vertical-align:top; }
-    th { color:#94a3b8; font-weight:600; background:#0f172a55; }
-    .muted { color: var(--muted); font-size:0.85rem; }
-    .warn { color: var(--warn); font-size:0.8rem; }
-    .chart { overflow-x:auto; margin: 8px 0 12px; background:#0f172a66; border-radius:8px; padding:8px; }
-    ul.insights li { margin: 8px 0; }
-    footer { text-align:center; color:var(--muted); font-size:0.8rem; padding: 24px; }
-    .note { background:#0f172a; border-left:3px solid var(--warn); padding:10px 14px; margin:12px 0; border-radius:6px; font-size:0.9rem; }
-    """
+    # --- Deep dive: Top 5 dimensions by fill rate ---
+    top_dims = sorted(
+        [(d, meta["fill_rates"][d]) for d in ATTR_DIMS if meta["fill_rates"][d] > 0],
+        key=lambda x: -x[1]
+    )[:5]
 
-    return f"""<!DOCTYPE html>
+    deep_dive_blocks = []
+    deep_dive_insights = []
+
+    for rank, (td, fr) in enumerate(top_dims, 1):
+        arr = aggs.get(td) or []
+        if not arr:
+            continue
+
+        tag_count = len(arr)
+        top3 = arr[:3]
+        top3_share = sum(x["占比"] for x in top3)
+        top1 = arr[0]
+        is_concentrated = top1["占比"] >= 40
+        vol_list = [x["搜索量"] for x in arr]
+        max_vol = max(vol_list) if vol_list else 0
+        med_vol = statistics.median(vol_list) if vol_list else 0
+
+        # Build insight per dim
+        concentration_label = "高度集中" if is_concentrated else "分散均衡"
+        insight_text = (
+            "「{}」填充率 {:.1f}%，共 {} 个标签。"
+            "Top3 标签「{}」合计占比 {:.1f}%，{}。"
+        ).format(
+            td, fr, tag_count,
+            "、".join(x["标签"] for x in top3),
+            top3_share,
+            "头部效应显著，适合聚焦核心标签" if is_concentrated else "标签分布较分散，可多角度覆盖"
+        )
+        deep_dive_insights.append(insight_text)
+
+        # Bar chart for this dim (top 12 tags)
+        bar_html = make_bar([(x["标签"], x["搜索量"]) for x in arr[:12]])
+
+        # Progress bars for top 5 tags share
+        progress_bars = []
+        for x in arr[:5]:
+            pct = x["占比"]
+            label = x["标签"][:12] + ("\u2026" if len(x["标签"]) > 12 else x["标签"])
+            progress_bars.append(
+                ('<div class="progress-bar-wrapper">'
+                '<div class="progress-bar-label"><span>{} ({:,})</span><span>{:.1f}%</span></div>'
+                '<div class="progress-bar"><div class="fill" style="width:{}%"></div></div>'
+                '</div>'
+                ).format(html.escape(label), int(x["搜索量"]), pct, min(pct, 100))
+            )
+
+        # Detail table for this dim (all tags)
+        detail_tbl = table_html(
+            ["标签", "词数", "搜索量(等分)", "中位", "占比%", "Top词"],
+            [[x["标签"], x["词数"], int(x["搜索量"]), x["中位搜索量"], x["占比"], x["Top词"]] for x in arr],
+            15,
+        )
+
+        # Cross-dim co-occurrence with other top dims
+        cross_blocks = []
+        for other_td, _ in top_dims:
+            if other_td == td:
+                continue
+            co = cooccurrence(rows, td, other_td, 5)
+            if not co:
+                continue
+            co_tbl = table_html(
+                ["{}标签".format(td[:4]), "{}标签".format(other_td[:4]), "分摊搜索量", "词数"],
+                [[c["标签A"], c["标签B"], int(c["搜索量"]), c["词数"]] for c in co],
+                5,
+            )
+            cross_blocks.append("<h4>{} \u00d7 {}</h4>{}".format(html.escape(td), html.escape(other_td), co_tbl))
+
+        concentration_tag = '<span class="tag tag-accent">{}</span>'.format(concentration_label)
+
+        deep_dive_blocks.append(
+            ('<h3>{}. {} <span style="font-size:12px;font-weight:400;color:var(--color-text-muted);">'
+            '填充率 {:.1f}% · {} 标签 · Top3占比 {:.1f}% {}</span></h3>'
+            '<div class="summary-box"><h4>维度洞察</h4><p>{}</p></div>'
+            '{}'
+            '<h4>Top 5 标签占比</h4>{}'
+            '<h4>全标签明细</h4>{}'
+            '{}'
+            ).format(
+                rank, html.escape(td), fr, tag_count, top3_share, concentration_tag,
+                html.escape(insight_text),
+                bar_html,
+                "".join(progress_bars),
+                detail_tbl,
+                "".join(cross_blocks) if cross_blocks else ""
+            )
+        )
+
+    deep_dive_insight_lis = "".join(
+        '<li class="priority-{}">{}</li>'.format(
+            "high" if i < 2 else "medium" if i < 4 else "low",
+            html.escape(s)
+        )
+        for i, s in enumerate(deep_dive_insights)
+    )
+
+    # Renumber sections: shift original 5,6 to 6,7 and insert deep dive as 5
+    canvas_js_all = "\n".join(canvas_scripts)
+
+    html_out = """<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>{html.escape(title)}</title>
-<style>{css}</style>
+<title>{TITLE}</title>
+<style>{CSS}</style>
 </head>
 <body>
-<header>
-  <h1>{html.escape(title)}</h1>
-  <div class="meta">品类：{html.escape(category or "-")} · 生成时间：{generated} · 口径：多标签搜索量等分 · 源：COSMO 属性 CSV</div>
-</header>
-<main>
-  <h2>1. 总览 KPI</h2>
-  {kpi_cards}
-  <div class="note">说明：属性多标签（如 a|b）在维度汇总时对搜索量做<strong>等分</strong>；未标注「-」不计入该维。数字均来自输入 CSV，未外推。</div>
-  <section class="card">
-    <h3>各维填充率</h3>
-    {table_html(["维度", "填充率", "建议"], fill_rows, 20)}
-  </section>
+<div class="report-container">
+<div class="report-main">
 
+<div class="report-header">
+  <h1>{TITLE}</h1>
+  <div class="report-subtitle">COSMO 属性市场分析</div>
+  <div class="report-meta">品类：{CATEGORY} · 生成时间：{GENERATED} · 口径：多标签搜索量等分 · 源：COSMO 属性 CSV</div>
+</div>
+
+{KPI_CARDS}
+
+<section class="content-section">
+  <h2>1. 总览与填充率</h2>
+  <div class="summary-box">
+    <h4>口径说明</h4>
+    <p>属性多标签（如 a|b）在维度汇总时对搜索量做<strong>等分</strong>；未标注「-」不计入该维。数字均来自输入 CSV，未外推。</p>
+  </div>
+  {FILL_TABLE}
+  <div class="data-source">
+    <span class="ds-label">数据源：</span>
+    <span class="ds-tool">bailing-cerebro-keyword-analysis</span>
+    <span class="ds-time">· {GENERATED}</span>
+    <div class="ds-computed">
+      <span class="ds-label">计算指标：</span>
+      填充率 = 该维有效标签词数 ÷ 总词数 · 头部贡献 = 前4%词搜索量 ÷ 总搜索量 · 多标签等分：词搜索量 ÷ 标签数
+    </div>
+  </div>
+</section>
+
+<section class="content-section">
   <h2>2. 数学 / 科学洞察</h2>
-  <section class="card">
-    <ul class="insights">{insight_lis}</ul>
-  </section>
+  <ul class="insight-list">{INSIGHT_LIS}</ul>
+</section>
 
+<section class="content-section">
   <h2>3. 头部 vs 长尾</h2>
-  {head_html}
-  {tail_html}
+  {HEAD_HTML}
+  {TAIL_HTML}
+</section>
 
-  <h2>4. 属性维度流量副表</h2>
-  {"".join(dim_sections)}
+<section class="content-section">
+  <h2>4. 属性维度流量副表（COSMO 13 维全景）</h2>
+  {DIM_SECTIONS}
+</section>
 
-  <h2>5. 维度交叉（共现）</h2>
-  <section class="card">
-    {"".join(co_blocks) or "<p class='muted'>有效交叉不足</p>"}
-  </section>
+<section class="content-section">
+  <h2>5. 产品深耕分析（Top 5 维度下钻）</h2>
+  <div class="summary-box">
+    <h4>分析逻辑</h4>
+    <p>在 COSMO 13 维全景基础上，自动选取填充率最高的前 5 个维度做下钻分析。每个维度展示标签集中度、Top 5 占比分布、全标签明细和跨维度共现，帮助识别该品类的核心属性轴。</p>
+  </div>
+  {DEEP_DIVE_BLOCKS}
+  <h3>深耕小结</h3>
+  <ul class="insight-list">{DEEP_DIVE_INSIGHT_LIS}</ul>
+</section>
 
-  <h2>6. 蓝海 × 搜索量窗口</h2>
-  <section class="card">
-    <p class="muted">优先「蓝海/温和」且仍有搜索量的词；激烈/极激烈已排除。</p>
-    {blue_tbl}
-  </section>
-</main>
-<footer>COSMO 市场分析 · bailing-cosmo-market-analysis · 离线自包含 HTML（无 CDN）</footer>
+<section class="content-section">
+  <h2>6. 维度交叉（共现）</h2>
+  {CO_BLOCKS}
+</section>
+
+<section class="content-section">
+  <h2>7. 蓝海 × 搜索量窗口</h2>
+  <p style="color:var(--color-text-muted);font-size:13px;">优先「蓝海/温和」且仍有搜索量的词；激烈/极激烈已排除。</p>
+  {BLUE_TBL}
+</section>
+
+<div class="report-footer">COSMO 市场分析 · bailing-cosmo-market-analysis · 离线自包含 HTML（无 CDN）</div>
+
+</div>
+<aside class="toc-sidebar" id="toc">
+  <div class="toc-sidebar-title">目录</div>
+  <ul></ul>
+</aside>
+</div>
+
+<script>
+{CANVAS_JS}
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {{
+  try {{
+    {CANVAS_JS_ALL}
+  }} catch(e) {{ console.error('Canvas chart init failed:', e); }}
+}});
+</script>
+<script>
+{TOC_JS}
+</script>
 </body>
 </html>
-"""
+""".format(
+        TITLE=html.escape(title),
+        CSS=_TEMPLATE_CSS,
+        CATEGORY=html.escape(category or "-"),
+        GENERATED=generated,
+        KPI_CARDS=kpi_cards,
+        FILL_TABLE=fill_table,
+        INSIGHT_LIS=insight_lis,
+        HEAD_HTML=head_html,
+        TAIL_HTML=tail_html,
+        DIM_SECTIONS="".join(dim_sections),
+        CO_BLOCKS="".join(co_blocks) or '<p style="color:var(--color-text-muted);font-size:13px;">有效交叉不足</p>',
+        BLUE_TBL=blue_tbl,
+        DEEP_DIVE_BLOCKS="".join(deep_dive_blocks),
+        DEEP_DIVE_INSIGHT_LIS=deep_dive_insight_lis,
+        CANVAS_JS=_CANVAS_JS,
+        CANVAS_JS_ALL=canvas_js_all,
+        TOC_JS=_TOC_JS,
+    )
+
+    return html_out
 
 
 # ---------------------------------------------------------------------------
