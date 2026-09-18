@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ASIN Listing 风险监控</title>
+<style>
+body{font:14px system-ui,sans-serif;margin:24px;color:#222}
+h1{margin-bottom:4px}
+.muted{color:#666}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:18px 0}
+.tabs button{padding:8px 12px;border:1px solid #bbb;background:#f5f5f5;border-radius:4px;cursor:pointer}
+.tabs button.active{background:#153e75;color:#fff}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:12px 0}
+button.secondary{padding:8px 12px;border:1px solid #153e75;background:#fff;border-radius:4px;cursor:pointer}
+.panel{overflow:auto}
+table{border-collapse:collapse;width:100%;min-width:720px}
+th,td{border:1px solid #ddd;padding:7px;text-align:left;vertical-align:top}
+th{background:#eef3f8;position:sticky;top:0}
+.status{margin:8px 0;padding:8px;background:#faf6df;border-left:4px solid #d7ad32}
+.hint{margin:8px 0;padding:8px;background:#eef6ff;border-left:4px solid #3a7cae}
+.empty{color:#777;padding:16px}
+code{background:#f2f2f2;padding:1px 4px;border-radius:3px}
+</style>
+</head>
+<body>
+<h1>ASIN Listing 风险监控</h1>
+<p class="muted">本地看板。浏览器不能自动读文件夹，所以要么点「加载空表示例」看表结构，要么手动选 <code>daily/</code> 里的 CSV（不上传）。</p>
+<div class="row">
+  <input id="files" type="file" accept=".csv,text/csv" multiple>
+  <button class="secondary" id="demo" type="button">加载空表示例</button>
+</div>
+<div id="hint" class="hint"></div>
+<div id="status" class="status"></div>
+<div class="tabs" role="tablist">
+  <button data-tab="关键词">关键词</button>
+  <button data-tab="广告">广告</button>
+  <button data-tab="负评">负评</button>
+  <button data-tab="违禁词">违禁词</button>
+  <button data-tab="跨站点">跨站点</button>
+</div>
+<div id="panel" class="panel"></div>
+<script>
+const meta = {
+  关键词: {key:'keyword_rank', file:'daily/keyword_rank.csv', cols:['date','marketplace','asin','keyword','organic_rank','sponsored_present','searchable','source','note']},
+  广告: {key:'ads_status', file:'daily/ads_status.csv', cols:['date','marketplace','asin','campaign','state','spend_today','impressions','clicks','source','note']},
+  负评: {key:'neg_reviews', file:'daily/neg_reviews.csv', cols:['date','marketplace','asin','neg_count_1star','neg_count_2star','new_neg_since_yesterday','review_ids_sample','source','note']},
+  违禁词: {key:'forbidden_scan', file:'daily/forbidden_scan.csv', cols:['date','marketplace','asin','hit_terms','severity','snippet','action','source','note']},
+  跨站点: {key:'cross_site', file:'daily/cross_site.csv', cols:['date','asin','us_change','ca_status','mx_status','eu_status','spread_risk','note']}
+};
+const data = {};
+let active = '关键词';
+function parseCSV(s){
+  s = s.replace(/^\uFEFF/,'');
+  const rows = [];
+  let row = [], cell = '', quote = false;
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i], n = s[i+1];
+    if (c === '"' && quote && n === '"') { cell += '"'; i++; }
+    else if (c === '"') quote = !quote;
+    else if (c === ',' && !quote) { row.push(cell); cell = ''; }
+    else if ((c === '\n' || c === '\r') && !quote) {
+      if (c === '\r' && n === '\n') i++;
+      row.push(cell);
+      if (row.some(x => x !== '')) rows.push(row);
+      row = []; cell = '';
+    } else cell += c;
+  }
+  if (cell || row.length) { row.push(cell); if (row.some(x => x !== '')) rows.push(row); }
+  if (!rows.length) return [];
+  const h = rows[0];
+  return rows.slice(1).map(r => Object.fromEntries(h.map((k,i) => [k, r[i] ?? ''])));
+}
+function esc(v){ return String(v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function emptyRow(cols){ return Object.fromEntries(cols.map(c => [c, '无数据'])); }
+function loadDemo(){
+  for (const t of Object.keys(meta)) {
+    const m = meta[t];
+    data[m.key] = [emptyRow(m.cols)];
+  }
+  document.getElementById('status').textContent = '已加载空表示例（全是「无数据」）。要看真数请选 daily/ 下对应 CSV。';
+  render();
+}
+function render(){
+  const m = meta[active];
+  document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('active', b.dataset.tab === active));
+  document.getElementById('hint').innerHTML = '当前页「' + active + '」请选文件：<code>' + m.file + '</code>（也可多选一次选齐）。';
+  const rows = data[m.key] || [];
+  if (!rows.length) {
+    document.getElementById('panel').innerHTML = '<div class="empty">这页还没数据。点「加载空表示例」，或选择 <code>' + m.file + '</code>。</div>';
+    return;
+  }
+  const cols = Object.keys(rows[0]);
+  let h = '<table><thead><tr>' + cols.map(c => '<th>' + esc(c) + '</th>').join('') + '</tr></thead><tbody>';
+  h += rows.map(r => '<tr>' + cols.map(c => '<td>' + esc(r[c] || '无数据') + '</td>').join('') + '</tr>').join('');
+  document.getElementById('panel').innerHTML = h + '</tbody></table>';
+}
+document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => { active = b.dataset.tab; render(); });
+document.getElementById('files').onchange = async e => {
+  for (const f of e.target.files) {
+    const text = await f.text();
+    const key = Object.keys(meta).find(k => f.name.includes(meta[k].key));
+    if (key) data[meta[key].key] = parseCSV(text);
+  }
+  document.getElementById('status').textContent = '已加载 ' + Object.keys(data).length + ' 个文件；当前页：' + active;
+  render();
+};
+document.getElementById('demo').onclick = loadDemo;
+document.getElementById('status').textContent = '还没选文件。可先点「加载空表示例」看表结构。';
+render();
+</script>
+</body>
+</html>

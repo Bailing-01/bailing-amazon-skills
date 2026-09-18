@@ -1,0 +1,61 @@
+﻿term,category(义成/冒器/药品/其他),lang(en/zh),severity
+adult,其他,en,high
+porn,其他,en,high
+pornographic,其他,en,high
+sex toy,其他,en,high
+sexual enhancement,其他,en,high
+erotic,其他,en,high
+nude,其他,en,high
+xxx,其他,en,high
+色情,其他,zh,high
+成人用品,其他,zh,high
+性用品,其他,zh,high
+情色,其他,zh,high
+裸露,其他,zh,high
+drug,药品,en,high
+prescription,药品,en,high
+antibiotic,药品,en,high
+steroid,药品,en,high
+tretinoin,药品,en,high
+hydroquinone,药品,en,high
+botox,药品,en,high
+cure acne,药品,en,mid
+treat eczema,药品,en,mid
+medical grade,药品,en,mid
+药品,药品,zh,high
+处方,药品,zh,high
+抗生素,药品,zh,high
+类固醇,药品,zh,high
+维甲酸,药品,zh,high
+氢醌,药品,zh,high
+肉毒素,药品,zh,high
+祛痘,药品,zh,mid
+治疗湿疹,药品,zh,mid
+医疗级,药品,zh,mid
+pesticide,冒器,en,high
+insecticide,冒器,en,high
+herbicide,冒器,en,high
+fungicide,冒器,en,high
+rodenticide,冒器,en,high
+杀虫,冒器,zh,high
+杀虫剂,冒器,zh,high
+除草剂,冒器,zh,high
+杀菌剂,冒器,zh,high
+灭鼠剂,冒器,zh,high
+whitening,义成,en,mid
+skin lightening,义成,en,mid
+bleach skin,义成,en,high
+anti-aging,义成,en,low
+antibacterial,义成,en,mid
+disinfect,义成,en,mid
+sterilize,义成,en,mid
+kills 99.9%,义成,en,mid
+美白,义成,zh,mid
+漂白皮肤,义成,zh,high
+祛斑,义成,zh,mid
+抗衰老,义成,zh,low
+抗菌,义成,zh,mid
+消毒,义成,zh,mid
+杀菌,义成,zh,mid
+灭菌,义成,zh,mid
+杀灭99.9%,义成,zh,mid

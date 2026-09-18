@@ -1,0 +1,9 @@
+out/
+daily/*_backup*
+.DS_Store
+# HTML captures from marketplace/search scrapes
+**/search_*.html
+**/www.amazon*.html
+# private backups
+*-private-backup*/
+*_private_backup*/
