@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ASIN Listing 风险监控 · 新手介绍</title>
+<style>
+:root{--ink:#222;--muted:#666;--line:#ddd;--bg:#f7f9fc;--card:#fff;--brand:#153e75;--soft:#eef3f8;--tip:#eef6ff;--warn:#faf6df;--ok:#eaf7ef}
+*{box-sizing:border-box}
+body{font:15px/1.6 system-ui,-apple-system,sans-serif;margin:0;color:var(--ink);background:var(--bg)}
+.wrap{max-width:860px;margin:0 auto;padding:28px 20px 64px}
+header{background:var(--brand);color:#fff;border-radius:12px;padding:28px 24px;margin-bottom:20px}
+header h1{margin:0 0 8px;font-size:1.55rem}
+header p{margin:0;opacity:.92}
+.muted{color:var(--muted)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px 20px;margin:14px 0}
+h2{margin:28px 0 10px;font-size:1.2rem;color:var(--brand)}
+h3{margin:16px 0 8px;font-size:1.02rem}
+ul,ol{padding-left:1.25rem;margin:8px 0}
+li{margin:6px 0}
+code,kbd{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:#f2f2f2;padding:1px 5px;border-radius:4px;font-size:.92em}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:12px 0}
+.tile{background:var(--soft);border-radius:8px;padding:14px}
+.tile strong{display:block;margin-bottom:4px;color:var(--brand)}
+.tip{background:var(--tip);border-left:4px solid #3a7cae;padding:10px 12px;margin:12px 0;border-radius:0 8px 8px 0}
+.warn{background:var(--warn);border-left:4px solid #d7ad32;padding:10px 12px;margin:12px 0;border-radius:0 8px 8px 0}
+.ok{background:var(--ok);border-left:4px solid #2f7a4a;padding:10px 12px;margin:12px 0;border-radius:0 8px 8px 0}
+.steps{counter-reset:s}
+.steps li{list-style:none;position:relative;padding-left:2.2rem;margin:12px 0}
+.steps li::before{counter-increment:s;content:counter(s);position:absolute;left:0;top:0;width:1.5rem;height:1.5rem;border-radius:50%;background:var(--brand);color:#fff;font-size:.85rem;display:flex;align-items:center;justify-content:center}
+table{border-collapse:collapse;width:100%;font-size:.95rem}
+th,td{border:1px solid var(--line);padding:8px;text-align:left;vertical-align:top}
+th{background:var(--soft)}
+a{color:var(--brand)}
+footer{margin-top:28px;color:var(--muted);font-size:.9rem}
+.pill{display:inline-block;background:rgba(255,255,255,.18);padding:3px 10px;border-radius:999px;font-size:.85rem;margin-right:6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div><span class="pill">Skill</span><span class="pill">本地 CSV 骨架</span><span class="pill">新手向</span></div>
+  <h1>ASIN Listing 风险监控<br>怎么用？有什么用？</h1>
+  <p>给亚马逊卖家 / 运营的本地风控脚手架：盯关键词、广告、负评、违禁词、跨站点，缺数据就标「无数据」，不编造。</p>
+</header>
+
+<div class="card">
+  <strong>一句话</strong>
+  <p style="margin:8px 0 0">它帮你把「这个 ASIN 今天安不安全」拆成 5 个可勾选项，落成表格和短结论；Skill 负责检查流程，本机文件夹负责记账看板。</p>
+</div>
+
+<h2>有什么用？</h2>
+<div class="grid">
+  <div class="tile"><strong>防漏检</strong>每天按固定五项扫，不会只看销量忘了违禁词或跨站传染。</div>
+  <div class="tile"><strong>可复盘</strong>CSV + 报告可对比昨天，负评暴增、广告突然停投看得见。</div>
+  <div class="tile"><strong>可分享</strong>骨架可公开；真实店铺数据留在本机私有备份，不混进 GitHub。</div>
+  <div class="tile"><strong>可协作</strong>朋友 clone 仓库就能开工；有 Grok Bot 还能装同名 Skill 自动跑流程。</div>
+</div>
+
+<div class="tip">适合：美亚白牌美妆/护肤、代运营可逆品（如 bidet seat）等需要盯 Listing 政策与账号健康的人。不适合：指望它自动登录广告后台代你点投放——没有 Seller Central 权限时，广告花费一律「无数据」。</div>
+
+<h2>两件套分别干什么？</h2>
+<table>
+  <thead><tr><th>东西</th><th>是什么</th><th>新手怎么理解</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><code>asin-risk-monitor/</code><br>本地骨架</td>
+      <td>CSV 表、词库、Python 小脚本、<code>index.html</code> 看板</td>
+      <td>你的「账本 + 仪表盘」。填数、看表、扫违禁词都在这里。</td>
+    </tr>
+    <tr>
+      <td><code>asin-listing-risk-monitor</code><br>Skill</td>
+      <td>给 AI 助手的检查步骤说明书</td>
+      <td>你的「检查清单」。跟 Bot 说扫某个 ASIN，它按 7 步跑并出短结论。</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>五项检查分别管什么？</h2>
+<ol>
+  <li><strong>关键词可搜索性</strong>：核心词搜得到吗？有机大概第几？结果卡有没有 Sponsored？</li>
+  <li><strong>广告是否在投放</strong>：有 Ads 后台就记状态/花费；没有就标「无数据」，别瞎猜。</li>
+  <li><strong>负评日均（昨今对比）</strong>：1★/2★ 与昨日差多少；没有昨日快照就「无数据」。</li>
+  <li><strong>违禁词扫描</strong>：标题/五点/A+ 对词库（义成/冒器/药品/其他）；命中=人工复核线索，≠最终违规定论。</li>
+  <li><strong>跨站点</strong>：US/CA/MX/UK/DE/FR 文案或可用性变动是否可能影响美站或互相传染。</li>
+</ol>
+
+<h2>新手 10 分钟上手</h2>
+<ol class="steps">
+  <li>
+    <strong>拿到骨架</strong><br>
+    <code>git clone https://github.com/Bailing-01/bailing-amazon-skills.git</code><br>
+    把里面的 <code>asin-risk-monitor/</code> 拷到本机，例如 <code>~/Documents/asin-risk-monitor/</code>。
+  </li>
+  <li>
+    <strong>登记你的 ASIN</strong><br>
+    打开 <code>config/asins.csv</code>，填：店铺、站点、ASIN、核心关键词（多个用 <code>|</code> 分隔）。至少 1 个 ASIN 就能开始。
+  </li>
+  <li>
+    <strong>跑第一天检查</strong><br>
+    <em>有 Grok Bot / 已装 Skill：</em>把 ASIN 或 Listing 链接发给「ASIN风控」类助手，让它按五项抓公页并回写 <code>daily/</code>。<br>
+    <em>没有 Bot：</em>自己打开亚马逊公页 / Seller Central，把能核实的数字抄进 <code>daily/</code> 五张表，来源写在 <code>source</code> 列。
+  </li>
+  <li>
+    <strong>违禁词（可选但推荐）</strong><br>
+    把标题+五点+A+ 存成 <code>listing.txt</code>，在骨架目录执行：<br>
+    <code>python3 scripts/scan_forbidden.py listing.txt</code>
+  </li>
+  <li>
+    <strong>看表 + 写结论</strong><br>
+    浏览器打开 <code>index.html</code> → 选择 <code>daily/</code> 里的 CSV（不上传）。再按 <code>templates/daily_report.md</code> 写短结论和行动项。
+  </li>
+</ol>
+
+<div class="ok"><strong>铁规则：</strong>缺数据就写「无数据」。不要猜排名、花费、曝光、点击、评论数。宁可空着，也不要假数误报锁店风险。</div>
+
+<h2>每天怎么用（建议节奏）</h2>
+<div class="card">
+  <ol>
+    <li>对重点 ASIN 复扫五项（或让 Bot 复扫）。</li>
+    <li>把结果追加进 <code>daily/</code>（同一天可覆盖，跨天请保留历史或另存快照）。</li>
+    <li>用 <code>scripts/diff_neg_reviews.py</code> 对比昨日负评 CSV，算 delta。</li>
+    <li>只把「结论 + 行动项」发群；原始 CSV 留本机。</li>
+  </ol>
+</div>
+
+<h2>常见坑</h2>
+<ul>
+  <li><strong>搜不到 Sponsored ≠ 广告关了</strong>：公页徽章只是旁证，花费仍以 Ads 后台为准。</li>
+  <li><strong>词库命中 ≠ 立刻违规</strong>：比如 OTC 文案里的 <code>without a prescription</code>，要人工结合类目语境。</li>
+  <li><strong>CA/MX 同 ASIN 404</strong>：可能根本没开同 ASIN，别当成「被删」恐慌；EU 常被反爬，标题可能「无数据」。</li>
+  <li><strong>别把真实店铺扫描推上 Public 仓库</strong>：GitHub 上只放空表头骨架；实扫放本机私有备份。</li>
+</ul>
+
+<div class="warn">本介绍页不存储、不联网上传你的 CSV。看板 <code>index.html</code> 同样只在本地读你选中的文件。</div>
+
+<h2>相关文件速查</h2>
+<table>
+  <thead><tr><th>路径</th><th>用途</th></tr></thead>
+  <tbody>
+    <tr><td><code>config/asins.csv</code></td><td>监控清单</td></tr>
+    <tr><td><code>daily/*.csv</code></td><td>五项日更数据</td></tr>
+    <tr><td><code>lexicon/forbidden_terms.csv</code></td><td>违禁词库</td></tr>
+    <tr><td><code>scripts/scan_forbidden.py</code></td><td>扫文案</td></tr>
+    <tr><td><code>scripts/diff_neg_reviews.py</code></td><td>负评昨今差</td></tr>
+    <tr><td><code>templates/daily_report.md</code></td><td>日报模板</td></tr>
+    <tr><td><code>index.html</code></td><td>本地看板</td></tr>
+    <tr><td><code>skills/asin-listing-risk-monitor/SKILL.md</code></td><td>给 AI 的流程</td></tr>
+  </tbody>
+</table>
+
+<footer>
+  仓库：<a href="https://github.com/Bailing-01/bailing-amazon-skills">Bailing-01/bailing-amazon-skills</a>
+  · 目录 <code>asin-risk-monitor/</code>
+  · 打开本页：双击 <code>intro.html</code> 或用浏览器打开本地文件
+</footer>
+</div>
+</body>
+</html>
