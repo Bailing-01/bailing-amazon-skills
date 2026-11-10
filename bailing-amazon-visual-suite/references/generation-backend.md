@@ -1,12 +1,13 @@
 # Generation Backend
 
-Use this file before final image generation. The goal is to choose a working route without hard-coding credentials or forcing one local environment.
+Use this file before final image generation. The goal is to use `gsk img` + gpt-image-2 first, then a working fallback without hard-coding credentials or forcing one local environment.
 
 ## Route Priority
 
-1. Use an existing Bailing deployment helper in the active workspace when present.
-2. Use a fixed-interface generation script from a related Bailing skill when it is present and configured.
-3. Use built-in `image_gen` as the final fallback.
+1. **Preferred: `gsk img` + gpt-image-2.** Call once per final image with `--args-file` JSON (`model`, `aspect_ratio`, `image_urls`, and the full `query` from the Prompt Contract in `SKILL.md`). Do not send abstract style-only prompts.
+2. If the preferred route is unavailable or fails, explain the reason and get the user's approval, then use an existing Bailing deployment helper in the active workspace when present.
+3. Or, after the same approval, use a fixed-interface generation script from a related Bailing skill when it is present and configured.
+4. Built-in `image_gen` is the last fallback, and also requires the user approval in step 2. Do not switch to it just to save steps.
 
 ## Discovery
 
@@ -121,10 +122,11 @@ Do not write credentials into files. Use existing `.env`, environment variables,
 
 ## Fallback Rules
 
-If no fixed route is available, fails, or cannot save/display the result, use built-in `image_gen`.
+If the preferred `gsk img` + gpt-image-2 route is unavailable, fails, or cannot save/display the result, do not silently switch backends. Report the attempted route and a high-level failure reason, get the user's approval, then use a Bailing deployment helper, a fixed-interface script, or built-in `image_gen`.
 
 When falling back, report:
 
 - attempted route
 - failure reason at a high level
+- user approval to switch
 - final route used
