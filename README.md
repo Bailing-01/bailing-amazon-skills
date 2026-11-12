@@ -9,6 +9,7 @@
 亚马逊所有sop基本功 Ai化
 
 新增：
+- `amazon-listing-copy/` — 亚马逊 Listing 文案撰写（标题、五点、商品描述、Search Terms 和后台属性），五步采数后写稿
 - `kepu-mg-video/` — 商业知识科普动画：原曲卡拍、字幕渐进、柱图与公式因果演示，含定价利润/TACoS教学模型与本地验算脚本
 - `asin-risk-monitor/` — Listing/ASIN 风险监控本地骨架（无真实 ASIN 行、无 out/ 扫描产物）
 - `skills/asin-listing-risk-monitor/` — 配套监控流程 skill
