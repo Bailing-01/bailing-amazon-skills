@@ -1,0 +1,33 @@
+Skill directories in https://github.com/hyperfx-ai/marketing-skills that were not copied.
+Vendored: skills/meta-ads-library/SKILL.md, LICENSE, and .mcp.json (Hyper MCP URL only, no credentials).
+skills/amazon-ads exists upstream and was intentionally not copied. This entry does not wrap Amazon Ads.
+
+ad-creative-generation
+amazon-ads
+analytics-insights
+blog-generation
+brand-context
+cold-email-outreach
+competitor-intel
+customer-research
+email-lifecycle
+gmail
+google-ads
+google-sheets
+hyper-cli
+image-generation
+instagram
+linkedin
+meta-ads
+openai-ads
+pinterest-ads
+reddit
+reddit-ads
+seo-research
+slack
+snapchat-ads
+tiktok
+tiktok-ads
+twilio
+video-generation
+youtube

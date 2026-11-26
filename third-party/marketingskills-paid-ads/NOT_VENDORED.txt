@@ -1,0 +1,56 @@
+Skill directories in https://github.com/coreyhaines31/marketingskills that were not copied.
+Vendored: skills/ads and skills/ad-creative, plus the repository LICENSE.
+Also not copied: tools/, docs/, evals/, tests/, scripts/, .github, README, VERSIONS.md, and other root files.
+Relative links from the vendored skills into those omitted skills will not resolve locally; use the upstream repository.
+
+ab-testing
+ai-seo
+analytics
+aso
+attribution
+churn-prevention
+co-marketing
+cold-email
+community-marketing
+competitor-profiling
+competitors
+content-strategy
+conversion-tracking
+copy-editing
+copywriting
+cro
+customer-research
+directory-submissions
+emails
+events
+free-tools
+image
+influencer-marketing
+launch
+lead-magnets
+link-building
+marketing-council
+marketing-ideas
+marketing-loops
+marketing-plan
+marketing-psychology
+offers
+onboarding
+paywalls
+popups
+pricing
+product-marketing
+programmatic-seo
+prospecting
+public-relations
+referrals
+reverse-engineer-marketing
+revops
+sales-enablement
+schema
+seo-audit
+signup
+site-architecture
+sms
+social
+video

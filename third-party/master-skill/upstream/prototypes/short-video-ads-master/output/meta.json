@@ -1,0 +1,64 @@
+{
+  "name": "short-video-ads-master",
+  "industry": "short-video paid advertising (China platforms)",
+  "industry_cn": "短视频投流",
+  "triggers": [
+    "投流",
+    "巨量引擎",
+    "千川",
+    "信息流",
+    "创意素材",
+    "ROAS",
+    "完播率",
+    "跑量"
+  ],
+  "locale": "zh-CN",
+  "profile": "practitioner",
+  "focus": {
+    "primary": "巨量引擎信息流投放",
+    "secondary": "电商 / 直播带货导向"
+  },
+  "last_research_date": "2026-05-03",
+  "source_count": 107,
+  "primary_source_ratio": 0.81,
+  "tracks_covered": [
+    "figures",
+    "tools",
+    "workflows",
+    "canon",
+    "sources",
+    "glossary"
+  ],
+  "mental_models_count": 5,
+  "playbook_rules_count": 9,
+  "research_dimensions_count": 5,
+  "sub_skills": [
+    {
+      "slug": "juliang-qianchuan-official",
+      "path": "sub-skills/juliang-qianchuan-official/SKILL.md",
+      "figure": "巨量千川官方",
+      "perspective": "平台官方方法论 / 学习期 / 5A 人群 / 千川·乘方"
+    },
+    {
+      "slug": "luo-yonghao-jiaopengyou",
+      "path": "sub-skills/luo-yonghao-jiaopengyou/SKILL.md",
+      "figure": "罗永浩 (交个朋友)",
+      "perspective": "头部直播 / IP 主播 / 直播+短视频 双轨"
+    },
+    {
+      "slug": "dong-yuhui-dongfangzhenxuan",
+      "path": "sub-skills/dong-yuhui-dongfangzhenxuan/SKILL.md",
+      "figure": "董宇辉 (东方甄选)",
+      "perspective": "知识 + 文化型直播 / 慢节奏 / 信任经济"
+    }
+  ],
+  "generator": "master-skill v1.3",
+  "version": "1.3",
+  "changelog": [
+    {
+      "version": "1.3",
+      "date": "2026-05-03",
+      "what": "Initial generation"
+    }
+  ]
+}

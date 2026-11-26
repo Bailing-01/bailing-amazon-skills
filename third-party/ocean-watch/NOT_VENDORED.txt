@@ -1,0 +1,9 @@
+Not copied from https://github.com/westng/ocean-watch at the vendored commit:
+- .codex-plugin/bin/ocean-watch_darwin_amd64
+- .codex-plugin/bin/ocean-watch_darwin_arm64
+- .codex-plugin/bin/ocean-watch_linux_amd64
+- .codex-plugin/bin/ocean-watch_linux_arm64
+- .codex-plugin/bin/ocean-watch_windows_amd64.exe
+
+These are prebuilt Ocean Watch runtimes, about 200MB together. bin/ocean-watch-launcher still expects the matching file under upstream/.codex-plugin/bin/. Get the binaries from the upstream checkout or a GitHub release (https://github.com/westng/ocean-watch/releases). Go source is in upstream/runtime/.
+No Amazon Advertising API client was added.

@@ -1,0 +1,442 @@
+package cli
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+	"strings"
+
+	"github.com/westng/ocean-watch/runtime/ocean-watch-go/internal/adapters/credentials"
+	"github.com/westng/ocean-watch/runtime/ocean-watch-go/internal/adapters/environment"
+	"github.com/westng/ocean-watch/runtime/ocean-watch-go/internal/adapters/filesystem"
+	"github.com/westng/ocean-watch/runtime/ocean-watch-go/internal/adapters/python"
+	"github.com/westng/ocean-watch/runtime/ocean-watch-go/internal/application"
+	"github.com/westng/ocean-watch/runtime/ocean-watch-go/internal/application/auth"
+	"github.com/westng/ocean-watch/runtime/ocean-watch-go/internal/application/onboarding"
+	"github.com/westng/ocean-watch/runtime/ocean-watch-go/internal/application/policy"
+	"github.com/westng/ocean-watch/runtime/ocean-watch-go/internal/bootstrap"
+	"github.com/westng/ocean-watch/runtime/ocean-watch-go/internal/contracts"
+	"github.com/westng/ocean-watch/runtime/ocean-watch-go/internal/domain"
+	"github.com/westng/ocean-watch/runtime/ocean-watch-go/internal/domain/configuration"
+	"github.com/westng/ocean-watch/runtime/ocean-watch-go/internal/platform/requestcontrol"
+	"github.com/westng/ocean-watch/runtime/ocean-watch-go/internal/ports/state"
+	"github.com/westng/ocean-watch/runtime/ocean-watch-go/internal/productversion"
+	"github.com/westng/ocean-watch/runtime/ocean-watch-go/internal/resources"
+	"github.com/westng/ocean-watch/runtime/ocean-watch-go/internal/runtimeupdate"
+)
+
+var Version = "dev"
+
+type Runner struct {
+	Policy             *policy.Instance
+	Official           OfficialRuntime
+	Routes             application.RouteManifest
+	RuntimeVersion     string
+	Stdout             io.Writer
+	Stderr             io.Writer
+	Stdin              io.Reader
+	Getenv             func(string) string
+	Cwd                string
+	PluginRoot         string
+	UserHome           string
+	Credentials        application.CredentialStore
+	Authorizations     onboarding.AuthorizationReader
+	PythonResolver     python.Resolver
+	EnvironmentProbe   onboarding.EnvironmentProbe
+	StateInspector     state.Inspector
+	AccountReports     AccountReportRuntime
+	Auth               AuthRuntime
+	MarketingDiscovery MarketingDiscoveryRuntime
+	MarketingMaterials MarketingMaterialRuntime
+	MarketingReports   MarketingReportRuntime
+	MarketingPlans     MarketingPlanRuntime
+	QianchuanPlans     QianchuanPlanRuntime
+	QianchuanReads     QianchuanReadRuntime
+	QianchuanReports   QianchuanReportRuntime
+	WorkMetadata       WorkMetadataRuntime
+	RequestObserver    func(string, requestcontrol.BudgetSnapshot, requestcontrol.MetricsSnapshot)
+}
+
+func (runner Runner) Execute(ctx context.Context, args []string) int {
+	stdout := runner.Stdout
+	if stdout == nil {
+		stdout = os.Stdout
+	}
+	stderr := runner.Stderr
+	if stderr == nil {
+		stderr = os.Stderr
+	}
+	stdin := runner.Stdin
+	if stdin == nil {
+		stdin = os.Stdin
+	}
+	getenv := runner.Getenv
+	if getenv == nil {
+		getenv = os.Getenv
+	}
+	invocation, err := Parse(args)
+	if err != nil {
+		WriteDomainError(stdout, domain.NewError("invalid_arguments", err.Error(), 2, nil))
+		return 2
+	}
+	if invocation.Version {
+		_, _ = fmt.Fprintf(stdout, "ocean-watch %s\n", Version)
+		return 0
+	}
+	if invocation.Help {
+		WriteHelp(stdout, invocation)
+		return 0
+	}
+	runtime, ok := runner.Routes.RouteFor(invocation.Command.Name())
+	if !ok {
+		WriteDomainError(stdout, domain.NewError("runtime_route_missing", "command has no runtime route", 1, nil))
+		return 1
+	}
+	_ = runtime
+	requestProfile, err := commandRequestBudgetProfile(invocation.Command)
+	if err != nil {
+		WriteDomainError(stdout, domain.NewError("request_control_error", err.Error(), 1, nil))
+		return 1
+	}
+	var requestBudget *requestcontrol.Budget
+	var requestMetrics *requestcontrol.Metrics
+	if requestProfile.unbounded {
+		ctx, requestBudget, requestMetrics, err = requestcontrol.PrepareUnboundedCommandContext(ctx)
+	} else {
+		ctx, requestBudget, requestMetrics, err = requestcontrol.PrepareCommandContext(ctx, requestProfile.limit)
+	}
+	if err != nil {
+		WriteDomainError(stdout, domain.NewError("request_control_error", err.Error(), 1, nil))
+		return 1
+	}
+	if runner.RequestObserver != nil {
+		defer func() {
+			runner.RequestObserver(
+				invocation.Command.Name(), requestBudget.Snapshot(), requestMetrics.Snapshot(),
+			)
+		}()
+	}
+	cwd := runner.Cwd
+	if cwd == "" {
+		cwd, _ = os.Getwd()
+	}
+	userHome := runner.UserHome
+	if userHome == "" {
+		userHome, _ = os.UserHomeDir()
+	}
+	codexRoot := filesystem.CodexHome(getenv, userHome)
+	instance := policy.Default()
+	if runner.Policy != nil {
+		instance = *runner.Policy
+	} else {
+		managed, configErr := filesystem.NewManagedConfigStore(getenv, userHome)
+		if configErr == nil {
+			config, readErr := managed.Read(ctx)
+			if readErr != nil && !errors.Is(readErr, os.ErrNotExist) {
+				WriteDomainError(stdout, domain.NewError("policy_configuration_invalid", "failed to read startup business policy", 2, nil))
+				return 2
+			}
+			if readErr == nil {
+				instance, configErr = policy.FromConfig(config)
+			}
+		}
+		if configErr != nil {
+			WriteDomainError(stdout, domain.NewError("policy_configuration_invalid", "invalid startup business policy", 2, nil))
+			return 2
+		}
+	}
+	runner.Policy = &instance
+	if spec, exists := contracts.DefaultCapabilityRegistry.ByCLICommand(invocation.Command.Name()); exists && spec.Effect == contracts.EffectOnlineWrite && submitted(invocation.Arguments) && invocation.Command.Name() != "operations execute" {
+		if version, err := productversion.Parse(runner.RuntimeVersion); err == nil && version.Prerelease() {
+			WriteDomainError(stdout, domain.NewError("preview_write_unavailable", "this preview requires the verified Qianchuan operation flow for online writes", 2, nil))
+			return 2
+		}
+	}
+	if spec, exists := contracts.DefaultCapabilityRegistry.ByCLICommand(invocation.Command.Name()); !exists || checkCLIInstance(instance, spec, invocation.Arguments) != nil {
+		WriteDomainError(stdout, domain.NewError("policy_denied", "startup business policy denied this capability", 2, nil))
+		return 2
+	}
+	credentialStore := runner.Credentials
+	if credentialStore == nil {
+		credentialStore = credentials.Store{
+			Root: filepath.Join(codexRoot, "ads-plan-monitor"), Getenv: getenv,
+		}
+	}
+	authorizations := runner.Authorizations
+	if authorizations == nil {
+		authorizations = filesystem.AuthorizationStore{Root: filepath.Join(codexRoot, "ads-plan-monitor", "state")}
+	}
+	switch invocation.Command.Domain {
+	case "operations":
+		return runner.runOperations(ctx, invocation.Command.Action, invocation.Arguments, codexRoot, credentialStore, stdout)
+	case "developer-docs":
+		grantStore, _ := authorizations.(auth.AuthorizationStore)
+		return runDeveloperDocs(ctx, invocation.Command.Action, invocation.Arguments, stdout, bootstrap.DeveloperAppReferences{Authorizations: grantStore, Policy: instance})
+	case "qc-official":
+		return runner.runOfficial(ctx, invocation.Command.Action, invocation.Arguments, codexRoot, credentialStore, stdin, stdout)
+	case "setup":
+		return runner.runSetup(
+			ctx, invocation.Command.Action, invocation.Arguments,
+			cwd, userHome, codexRoot, getenv, credentialStore, authorizations, stdout,
+		)
+	case "accounts":
+		explicitConfig := argumentValue(invocation.Arguments, "--config")
+		configPath := filesystem.ResolveConfigPath(explicitConfig, cwd, getenv, userHome)
+		store := filesystem.AccountStore{Path: filepath.Clean(configPath)}
+		if invocation.Command.Action == "report" {
+			stateRoot := filepath.Join(codexRoot, "ads-plan-monitor", "state")
+			return runner.runAccountReport(ctx, invocation.Arguments, store, stateRoot, credentialStore, stdout)
+		}
+		return RunAccounts(ctx, invocation.Command.Action, invocation.Arguments, store, stdout)
+	case "auth":
+		stateRoot := filepath.Join(codexRoot, "ads-plan-monitor", "state")
+		return runner.runAuth(ctx, invocation.Command.Action, invocation.Arguments, stateRoot, credentialStore, stdout, stderr)
+	case "runs":
+		store := filesystem.RunStore{Root: filesystem.ResolveRunsRoot(getenv, userHome)}
+		return RunRuns(ctx, invocation.Command.Action, invocation.Arguments, store, stdout)
+	case "templates":
+		explicitConfig := argumentValue(invocation.Arguments, "--config")
+		configPath := filepath.Clean(filesystem.ResolveConfigPath(explicitConfig, cwd, getenv, userHome))
+		store := filesystem.ConfigStore{Path: configPath}
+		authorizations := filesystem.AuthorizationStore{Root: filepath.Join(filesystem.CodexHome(getenv, userHome), "ads-plan-monitor", "state")}
+		return RunTemplatesInteractive(ctx, invocation.Command.Action, invocation.Arguments, store, authorizations, configPath, stdin, stdout)
+	case "materials":
+		stateRoot := filepath.Join(codexRoot, "ads-plan-monitor", "state")
+		return runner.runMarketingMaterials(
+			ctx, invocation.Command.Action, invocation.Arguments, cwd, userHome,
+			stateRoot, getenv, credentialStore, stdout,
+		)
+	case "discover":
+		stateRoot := filepath.Join(codexRoot, "ads-plan-monitor", "state")
+		return runner.runMarketingDiscovery(
+			ctx, invocation.Command.Action, invocation.Arguments, cwd, userHome,
+			stateRoot, getenv, credentialStore, stdout,
+		)
+	case "reports":
+		stateRoot := filepath.Join(codexRoot, "ads-plan-monitor", "state")
+		return runner.runMarketingReport(
+			ctx, invocation.Command.Action, invocation.Arguments, cwd, userHome,
+			stateRoot, getenv, credentialStore, stdout,
+		)
+	case "plans":
+		stateRoot := filepath.Join(codexRoot, "ads-plan-monitor", "state")
+		if isQianchuanPlanAction(invocation.Command.Action) {
+			return runner.runQianchuanPlan(
+				ctx, invocation.Command.Domain, invocation.Command.Action, invocation.Arguments,
+				cwd, userHome, stateRoot, getenv, credentialStore, stdin, stdout,
+			)
+		}
+		return runner.runMarketingPlan(
+			ctx, invocation.Command.Action, invocation.Arguments,
+			stateRoot, credentialStore, stdout,
+		)
+	case "qc-templates":
+		explicitConfig := argumentValue(invocation.Arguments, "--config")
+		configPath := filepath.Clean(filesystem.ResolveConfigPath(explicitConfig, cwd, getenv, userHome))
+		store := filesystem.ConfigStore{Path: configPath}
+		authorizations := filesystem.AuthorizationStore{Root: filepath.Join(filesystem.CodexHome(getenv, userHome), "ads-plan-monitor", "state")}
+		return RunQianchuanTemplatesInteractive(ctx, invocation.Command.Action, invocation.Arguments, store, authorizations, configPath, stdin, stdout)
+	case "qc-materials", "qc-products", "qc-plans":
+		if invocation.Command.Domain == "qc-plans" &&
+			(isQianchuanMutationAction(invocation.Command.Action) || isQianchuanBindingAction(invocation.Command.Action)) {
+			stateRoot := filepath.Join(codexRoot, "ads-plan-monitor", "state")
+			return runner.runQianchuanPlan(
+				ctx, invocation.Command.Domain, invocation.Command.Action, invocation.Arguments,
+				cwd, userHome, stateRoot, getenv, credentialStore, stdin, stdout,
+			)
+		}
+		if invocation.Command.Domain == "qc-materials" && invocation.Command.Action == "inspect-work" {
+			explicitConfig := argumentValue(invocation.Arguments, "--config")
+			configPath := filesystem.ResolveConfigPath(explicitConfig, cwd, getenv, userHome)
+			return runner.runInspectWork(ctx, invocation.Arguments, configPath, stdout)
+		}
+		explicitConfig := argumentValue(invocation.Arguments, "--config")
+		configPath := filesystem.ResolveConfigPath(explicitConfig, cwd, getenv, userHome)
+		stateRoot := filepath.Join(codexRoot, "ads-plan-monitor", "state")
+		return runner.runQianchuanRead(
+			ctx, invocation.Command.Domain, invocation.Command.Action, invocation.Arguments,
+			configPath, stateRoot, credentialStore, stdout,
+		)
+	case "qc-reports":
+		stateRoot := filepath.Join(codexRoot, "ads-plan-monitor", "state")
+		return runner.runQianchuanReport(
+			ctx, invocation.Command.Action, invocation.Arguments, stateRoot, credentialStore, stdout,
+		)
+	default:
+		WriteDomainError(stdout, domain.NewError("go_handler_missing", "Go route has no handler", 1, nil))
+		return 1
+	}
+}
+
+func isQianchuanPlanAction(action string) bool {
+	switch action {
+	case "create-qianchuan", "batch-qianchuan-works", "remove-qianchuan-work":
+		return true
+	default:
+		return false
+	}
+}
+
+func isQianchuanMutationAction(action string) bool {
+	switch action {
+	case "update-status", "update-budget", "update-roi":
+		return true
+	default:
+		return false
+	}
+}
+
+func isQianchuanBindingAction(action string) bool {
+	return action == "binding-audit" || action == "bind"
+}
+
+func (runner Runner) runSetup(
+	ctx context.Context,
+	action string,
+	args []string,
+	cwd string,
+	userHome string,
+	codexRoot string,
+	getenv func(string) string,
+	credentialStore onboarding.CredentialReader,
+	authorizations onboarding.AuthorizationReader,
+	stdout io.Writer,
+) int {
+	state := onboarding.LocalState{Credentials: credentialStore, Authorizations: authorizations}
+	probe := runner.EnvironmentProbe
+	if probe == nil {
+		probe = environment.Probe{PythonResolver: runner.PythonResolver, Credentials: credentialStore}
+	}
+	doctor := onboarding.Doctor{Probe: probe, RuntimeVersion: runner.RuntimeVersion, StateInspector: runner.StateInspector}
+	if runner.RuntimeVersion != "" {
+		doctor.RuntimeCheck = func(ctx context.Context) onboarding.Check {
+			manager := runtimeupdate.NewManager(codexRoot, filesystem.ResolvePluginRoot(cwd))
+			diagnostic := manager.Diagnose(ctx)
+			count := 0
+			for _, spec := range contracts.DefaultCapabilityRegistry.All() {
+				if spec.MCPTool != "" {
+					count++
+				}
+			}
+			check := onboarding.Check{
+				"id": "runtime", "required": true, "status": "ready", "diagnostic": diagnostic,
+				"mcp_tool_count": count, "message": "Runtime bundles are consistent.", "remediation": nil,
+			}
+			if len(diagnostic.Issues) > 0 {
+				check["status"] = "blocked"
+				check["message"] = "Runtime bundles are inconsistent or invalid."
+				check["remediation"] = "Reinstall the validated plugin bundle, then start a new task. Authorization does not need to be repeated."
+			}
+			return check
+		}
+	}
+	switch action {
+	case "doctor":
+		options, err := parseDoctorOptions(args)
+		if err != nil {
+			WriteDomainError(stdout, domain.NewError("configuration_error", err.Error(), 2, nil))
+			return 2
+		}
+		redirectURI := configuration.Channels[options.channel].RedirectURI
+		configPath := filepath.Clean(filesystem.ResolveConfigPath(options.configPath, cwd, getenv, userHome))
+		raw, readErr := (filesystem.ConfigStore{Path: configPath}).Read(ctx)
+		if readErr == nil {
+			runtimeConfig, _, runtimeErr := configuration.Runtime(raw, options.channel, "oauth")
+			if runtimeErr != nil {
+				WriteDomainError(stdout, domain.NewError("configuration_error", runtimeErr.Error(), 2, nil))
+				return 2
+			}
+			if configured := strings.TrimSpace(fmt.Sprint(configuration.Value(runtimeConfig, "oauth.redirect_uri"))); configured != "" && configured != "<nil>" {
+				redirectURI = configured
+			}
+		} else if !errors.Is(readErr, os.ErrNotExist) {
+			WriteDomainError(stdout, domain.NewError("configuration_error", readErr.Error(), 2, nil))
+			return 2
+		}
+		return RunDoctor(ctx, args, doctor, redirectURI, stdout)
+	case "init":
+		options, err := parseInitializeOptions(args)
+		if err != nil {
+			WriteDomainError(stdout, domain.NewError("configuration_error", err.Error(), 2, nil))
+			return 2
+		}
+		configPath, err := absoluteLocalPath(filesystem.ResolveInitializationConfigPath(
+			options.configPath, options.homeConfig, cwd, getenv, userHome,
+		))
+		if err != nil {
+			WriteDomainError(stdout, domain.NewError("configuration_error", err.Error(), 2, nil))
+			return 2
+		}
+		template, err := resources.DefaultConfig()
+		if err != nil {
+			WriteDomainError(stdout, domain.NewError("configuration_error", err.Error(), 2, nil))
+			return 2
+		}
+		pluginRoot := filesystem.ResolvePluginRoot(cwd)
+		skillRoot := resolveSkillRoot(pluginRoot)
+		initializer := onboarding.Initializer{
+			Store: filesystem.ConfigStore{Path: configPath}, State: state,
+			Doctor: doctor, ConfigPath: configPath,
+			SkillRoot: skillRoot, Command: "ocean-watch",
+		}
+		return RunInitialize(ctx, args, initializer, template, stdout)
+	case "validate":
+		options, err := parseValidateOptions(args)
+		if err != nil {
+			WriteDomainError(stdout, domain.NewError("configuration_error", err.Error(), 2, nil))
+			return 2
+		}
+		configPath, err := absoluteLocalPath(filesystem.ResolveConfigPath(options.configPath, cwd, getenv, userHome))
+		if err != nil {
+			WriteDomainError(stdout, domain.NewError("configuration_error", err.Error(), 2, nil))
+			return 2
+		}
+		config, err := (filesystem.ConfigStore{Path: configPath}).Read(ctx)
+		if err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				WriteDomainError(stdout, domain.NewError("configuration_error", "missing config: "+configPath, 2, nil))
+				return 2
+			}
+			WriteDomainError(stdout, domain.NewError("configuration_error", err.Error(), 2, nil))
+			return 2
+		}
+		return RunValidate(ctx, args, onboarding.Validator{State: state}, configPath, config, stdout)
+	default:
+		WriteDomainError(stdout, domain.NewError("go_handler_missing", "Go route has no handler", 1, nil))
+		return 1
+	}
+}
+
+func resolveSkillRoot(pluginRoot string) string {
+	if pluginRoot != "" {
+		return filepath.Join(pluginRoot, "skills", "ads-plan-monitor")
+	}
+	return ""
+}
+
+func absoluteLocalPath(path string) (string, error) {
+	absolute, err := filepath.Abs(filepath.Clean(path))
+	if err != nil {
+		return "", err
+	}
+	if canonical, canonicalErr := filepath.EvalSymlinks(filepath.Dir(absolute)); canonicalErr == nil {
+		return filepath.Join(canonical, filepath.Base(absolute)), nil
+	}
+	return absolute, nil
+}
+
+func argumentValue(args []string, name string) string {
+	for index, argument := range args {
+		if argument == name && index+1 < len(args) {
+			return args[index+1]
+		}
+		prefix := name + "="
+		if len(argument) > len(prefix) && argument[:len(prefix)] == prefix {
+			return argument[len(prefix):]
+		}
+	}
+	return ""
+}
