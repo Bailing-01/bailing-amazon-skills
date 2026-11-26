@@ -1,0 +1,47 @@
+config/
+runs/
+.venv/
+node_modules/
+*.tgz
+__pycache__/
+*.egg-info/
+*.pyc
+.DS_Store
+AGENTS.md
+.ruff_cache/
+.pytest_cache/
+.mypy_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+build/
+dist/
+release-notes/
+*.whl
+
+# Local unstripped Go binaries produced during development.
+runtime/ocean-watch-go/ocean-watch
+
+# Local credential fallback/cache files. Real tokens should live in the OS
+# credential store, not in this project.
+credentials.json
+credentials.dpapi
+oceanengine-app-*.json
+oceanengine-app-*.dpapi
+oceanengine-auth-*.json
+oceanengine-auth-*.dpapi
+.token.lock
+
+# Common CODEX_HOME locations used during local verification. Keep custom
+# CODEX_HOME directories outside the repository.
+/.codex/
+/ads-plan-monitor/
+
+# Local logs and temporary output.
+*.log
+*.tmp
+*.bak
+tmp/
+artifacts/
+runtime/ocean-watch-go/.tmp-live-auth/

@@ -1,0 +1,13 @@
+{
+  "industry": "short-video paid advertising (China platforms)",
+  "industry_cn": "短视频投流",
+  "slug": "short-video-ads",
+  "title": "短视频投流",
+  "locale": "zh-CN",
+  "profile": "practitioner",
+  "focus": {"primary": "巨量引擎信息流投放", "secondary": "电商 / 直播带货导向"},
+  "triggers": ["投流", "巨量引擎", "千川", "信息流", "创意素材", "ROAS", "完播率", "跑量"],
+  "source_count": 26,
+  "primary_source_ratio": 0.50,
+  "tracks_covered": ["figures", "tools", "workflows", "canon", "sources", "glossary"]
+}

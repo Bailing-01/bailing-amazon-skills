@@ -1,0 +1,44 @@
+# Secrets
+.env
+.env.*
+.netrc*
+*.pem
+*.key
+credentials.json
+.claude/settings.local.json
+
+# Per-iteration test/cleanup notes (live in memory/, not in repo)
+*.test.md
+references/cleanup-iter*.md
+PROTOTYPE_RUN.md
+
+# Regeneratable prototype intermediates
+prototypes/*/output/references/
+prototypes/*/references/synthesis-summary.*
+prototypes/*/references/quality-check-rubric.*
+
+# Generated research artifacts (when prototyping)
+prototypes/*/knowledge/sources/
+prototypes/*/knowledge/transcripts/
+prototypes/*/sources/
+*.srt
+*.vtt
+*.mp3
+*.mp4
+
+# skill_writer backup-on-rewrite files (auto-pruned, but never commit)
+*.bak.*
+
+# OS / editor
+.DS_Store
+*.swp
+.idea/
+.vscode/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.egg-info/

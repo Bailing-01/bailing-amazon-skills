@@ -1,0 +1,410 @@
+#!/usr/bin/env python3
+import hashlib
+import json
+import re
+import stat
+import sys
+from pathlib import Path
+
+import yaml
+
+ROOT = Path(__file__).resolve().parents[1]
+TARGETS = (
+    "ocean-watch_darwin_amd64",
+    "ocean-watch_darwin_arm64",
+    "ocean-watch_linux_amd64",
+    "ocean-watch_linux_arm64",
+    "ocean-watch_windows_amd64.exe",
+)
+
+
+def fail(message):
+    raise RuntimeError(message)
+
+
+def validate_manifest():
+    manifest = json.loads((ROOT / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8"))
+    if manifest.get("name") != "ocean-watch" or manifest.get("skills") != "./skills/":
+        fail("plugin manifest identity is invalid")
+    if manifest.get("mcpServers") != "./.mcp.json":
+        fail("plugin manifest MCP contract is invalid")
+    version = str(manifest.get("version") or "")
+    if re.fullmatch(r"(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)(?:-(?:alpha|beta|rc)\.[1-9][0-9]*)?(?:\+codex\.[A-Za-z0-9.-]+)?", version) is None:
+        fail("plugin manifest version is invalid")
+
+
+def validate_claude_manifest():
+    directory = ROOT / ".claude-plugin"
+    manifest_path = directory / "plugin.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    codex = json.loads((ROOT / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8"))
+    if manifest.get("name") != "ocean-watch" or manifest.get("skills") != "./skills":
+        fail("Claude plugin manifest identity is invalid")
+    if manifest.get("version") != codex.get("version"):
+        fail("Claude plugin manifest version must match the Codex manifest")
+    if re.fullmatch(
+        r"(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)(?:-(?:alpha|beta|rc)\.[1-9][0-9]*)?(?:\+codex\.[A-Za-z0-9.-]+)?", str(manifest.get("version") or "")
+    ) is None:
+        fail("Claude plugin manifest version is invalid")
+    servers = manifest.get("mcpServers")
+    if not isinstance(servers, dict) or set(servers) != {"ocean-watch"}:
+        fail("Claude plugin manifest must declare only the ocean-watch server")
+    server = servers["ocean-watch"]
+    root = "${CLAUDE_PLUGIN_ROOT}"
+    if server != {
+        "command": f"{root}/bin/ocean-watch-launcher",
+        "args": ["mcp", "proxy", "--stdio", "--plugin-root", root],
+    }:
+        fail("Claude MCP server must resolve the stable proxy from the plugin root")
+    if server["command"].lower() in {"sh", "bash", "zsh", "cmd", "cmd.exe", "powershell", "pwsh"}:
+        fail("Claude MCP server must not start through a shell")
+    marketplace_path = directory / "marketplace.json"
+    marketplace = json.loads(marketplace_path.read_text(encoding="utf-8"))
+    if marketplace.get("name") != "ocean-watch":
+        fail("Claude marketplace identity is invalid")
+    plugins = marketplace.get("plugins")
+    if not isinstance(plugins, list) or len(plugins) != 1:
+        fail("Claude marketplace must publish exactly one plugin")
+    entry = plugins[0]
+    if entry.get("name") != "ocean-watch" or entry.get("source") != "./":
+        fail("Claude marketplace entry must point at this repository root")
+    if entry.get("version") != codex.get("version"):
+        fail("Claude marketplace version must match the Codex manifest")
+    for path in (manifest_path, marketplace_path):
+        if path.stat().st_mode & (stat.S_IWGRP | stat.S_IWOTH):
+            fail(f"Claude manifest file is writable by group or other: {path.name}")
+
+
+def validate_harness_manifest():
+    manifest = json.loads((ROOT / "package.json").read_text(encoding="utf-8"))
+    codex = json.loads((ROOT / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8"))
+    if manifest.get("name") != "ocean-watch" or manifest.get("type") != "module":
+        fail("Harness package identity is invalid")
+    if manifest.get("version") != codex["version"].split("+", 1)[0]:
+        fail("Harness package version must match the product base version")
+    if manifest.get("dsh") != {"bundle": {"patch": "./harness/cordis.patch.yml"}}:
+        fail("Harness package must declare its bundle patch")
+    if manifest.get("exports", {}).get(".") != "./harness/index.mjs":
+        fail("Harness package must export its native plugin")
+    patch = yaml.safe_load((ROOT / "harness" / "cordis.patch.yml").read_text(encoding="utf-8"))
+    if patch != [{"insert": [{"id": "ocean-watch", "name": "ocean-watch"}]}]:
+        fail("Harness bundle must mount the ocean-watch plugin once")
+    peers = manifest.get("peerDependencies", {})
+    required_peers = {"@deepseek-ai/dsh-mcp-client", "@deepseek-ai/dsh-skill-filesystem"}
+    # package.json owns the compatibility pin; the desktop probe verifies it against the host.
+    versions = list(peers.values())
+    if (
+        set(peers) != required_peers
+        or any(not isinstance(version, str) for version in versions)
+        or len(set(versions)) != 1
+        or not re.fullmatch(r"\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?", versions[0])
+    ):
+        fail("Harness peers must share one exact desktop runtime version")
+    if manifest.get("peerDependenciesMeta") != {
+        name: {"optional": True} for name in required_peers
+    }:
+        fail("Harness must reuse the host's plugin providers")
+    required_files = {
+        "harness/index.mjs", "harness/config.mjs", "harness/cordis.patch.yml",
+        "bin/ocean-watch-launcher", ".codex-plugin/", ".claude-plugin/plugin.json",
+        ".mcp.json", "skills/", "f2/resolve.py", "contracts/", "pyproject.toml",
+    }
+    if set(manifest.get("files", [])) != required_files:
+        fail("Harness package must include exactly the declared distribution resources")
+    for path in required_files:
+        if not (ROOT / path).exists():
+            fail(f"Harness distribution resource is missing: {path}")
+
+
+def validate_mcp():
+    payload = json.loads((ROOT / ".mcp.json").read_text(encoding="utf-8"))
+    if set(payload) != {"mcpServers"}:
+        fail("MCP manifest has unsupported top-level fields")
+    servers = payload.get("mcpServers")
+    if not isinstance(servers, dict) or set(servers) != {"ocean-watch"}:
+        fail("MCP manifest must contain only the ocean-watch server")
+    server = servers["ocean-watch"]
+    expected = {
+        "command": "./bin/ocean-watch-launcher",
+        "args": ["mcp", "proxy", "--stdio", "--plugin-root", "."],
+        "cwd": ".",
+        "env": {"OCEAN_WATCH_MCP_CONTRACT_REVISION": "2026-11-07.operation-r1"},
+    }
+    if server != expected:
+        fail("MCP server must use the stable local runtime proxy")
+    command = server["command"].lower()
+    if command in {"sh", "bash", "zsh", "cmd", "cmd.exe", "powershell", "pwsh"}:
+        fail("MCP server must not start through a shell")
+    target = (ROOT / server["command"]).resolve()
+    launcher_root = (ROOT / "bin").resolve()
+    if target.parent != launcher_root or not target.is_file():
+        fail("MCP server command escaped the stable launcher directory")
+    if target.stat().st_mode & (stat.S_IWGRP | stat.S_IWOTH):
+        fail("MCP server executable is writable by group or other")
+    for path in (ROOT / ".mcp.json", ROOT / ".codex-plugin" / "plugin.json"):
+        if path.stat().st_mode & (stat.S_IWGRP | stat.S_IWOTH):
+            fail(f"MCP manifest file is writable by group or other: {path.name}")
+
+
+def validate_skill(name):
+    root = ROOT / "skills" / name
+    content = (root / "SKILL.md").read_text(encoding="utf-8")
+    match = re.match(r"^---\n(.*?)\n---", content, re.DOTALL)
+    if match is None:
+        fail(f"{name} has invalid frontmatter")
+    metadata = yaml.safe_load(match.group(1))
+    if metadata.get("name") != name or not str(metadata.get("description") or "").strip():
+        fail(f"{name} has invalid metadata")
+    interface = yaml.safe_load((root / "agents" / "openai.yaml").read_text(encoding="utf-8"))
+    prompt = str(((interface or {}).get("interface") or {}).get("default_prompt") or "")
+    if f"${name}" not in prompt:
+        fail(f"{name} default_prompt does not mention the Skill")
+    dependencies = ((interface or {}).get("dependencies") or {}).get("tools")
+    dependency_descriptions = {
+        "ads-plan-monitor": "Ocean Watch template and common Marketing query tools",
+        "qc-plan-monitor": "Ocean Watch template, common Qianchuan query, report, and preflight tools",
+        "xt-plan-monitor": "Ocean Watch Star Map authorization and managed-account tools",
+    }
+    expected_dependency = [{
+        "type": "mcp",
+        "value": "ocean-watch",
+        "description": dependency_descriptions[name],
+        "transport": "stdio",
+    }]
+    if dependencies != expected_dependency:
+        fail(f"{name} MCP dependency contract is invalid")
+    if name != "xt-plan-monitor" and ("MCP `list_templates`" not in content or "MCP `get_template`" not in content):
+        fail(f"{name} does not route template reads through MCP")
+    if "MCP `get_capabilities`" not in content or "Do not call `get_capabilities` when" not in content:
+        fail(f"{name} does not expose the bounded uncommon-capability route")
+    if name == "qc-plan-monitor" and (
+        "MCP `preflight_qianchuan_works`" not in content
+        or "MCP `get_qianchuan_preflight`" not in content
+    ):
+        fail("qc-plan-monitor does not route Qianchuan preflight through MCP")
+    if name == "qc-plan-monitor":
+        query_tools = (
+            "list_managed_accounts",
+            "get_qianchuan_authorization",
+            "search_qianchuan_products",
+            "list_qianchuan_plans",
+            "get_qianchuan_plan",
+            "report_qianchuan_account",
+            "report_qianchuan_plans",
+            "report_qianchuan_uni_account",
+            "get_qianchuan_official_capabilities",
+            "query_qianchuan_official",
+            "get_qianchuan_account_health",
+            "diagnose_qianchuan_plan",
+            "inspect_qianchuan_material_quality",
+            "get_qianchuan_delivery_suggestions",
+            "get_qianchuan_report_schema",
+            "report_qianchuan_custom",
+            "report_qianchuan_managed_accounts",
+        )
+        missing = [tool for tool in query_tools if f"MCP `{tool}`" not in content]
+        if missing:
+            fail(f"qc-plan-monitor does not route common Qianchuan reads through MCP: {missing}")
+        if "Do not call an equivalent CLI route" not in content or "stop without a CLI fallback" not in content:
+            fail("qc-plan-monitor does not fail closed for common Qianchuan MCP reads")
+    if name == "ads-plan-monitor":
+        query_tools = (
+            "list_managed_accounts",
+            "get_marketing_authorization",
+            "search_marketing_videos",
+            "search_marketing_creator_materials",
+            "report_marketing_materials",
+            "report_marketing_plans",
+        )
+        missing = [tool for tool in query_tools if f"MCP `{tool}`" not in content]
+        if missing:
+            fail(f"ads-plan-monitor does not route common Marketing reads through MCP: {missing}")
+        if "Do not call an equivalent CLI route" not in content or "stop without a CLI fallback" not in content:
+            fail("ads-plan-monitor does not fail closed for common Marketing MCP reads")
+    if name == "xt-plan-monitor":
+        for tool in ("get_star_map_authorization", "list_managed_accounts", "start_authorization", "start_account_sync", "get_authorization_session", "cancel_authorization_session"):
+            if f"`{tool}`" not in content:
+                fail(f"xt-plan-monitor is missing its Star Map route: {tool}")
+    if "search the repository" not in content or "stop without a CLI fallback" not in content:
+        fail(f"{name} does not fail closed when MCP template tools are unavailable")
+    if "call that exact MCP tool immediately" not in content or "never enumerate `ALL_TOOLS`" not in content:
+        fail(f"{name} may inspect deferred tool declarations before direct routing")
+    if not (root / "run.cmd").is_file():
+        fail(f"{name} Windows launcher is missing")
+    launcher = root / "run"
+    if not launcher.is_file() or not launcher.stat().st_mode & stat.S_IXUSR:
+        fail(f"{name} Unix launcher is missing or not executable")
+
+
+def validate_capability_routes():
+    fixture_path = ROOT / "runtime" / "ocean-watch-go" / "internal" / "contracts" / "testdata" / "skill-fast-routes.json"
+    fixture = json.loads(fixture_path.read_text(encoding="utf-8"))
+    expected_by_skill = {name: [] for name in ("ads-plan-monitor", "qc-plan-monitor", "xt-plan-monitor")}
+    seen = set()
+    for item in fixture:
+        required = ("skill", "outcome", "capability_id", "surface", "route")
+        if any(not str(item.get(key) or "").strip() for key in required):
+            fail(f"capability route fixture has incomplete item: {item}")
+        key = (item["skill"], item["outcome"])
+        if key in seen:
+            fail(f"capability route fixture has duplicate outcome: {key}")
+        seen.add(key)
+        if item["skill"] not in expected_by_skill or item["surface"] not in ("cli", "mcp"):
+            fail(f"capability route fixture has invalid item: {item}")
+        expected_by_skill[item["skill"]].append(item)
+
+    for name, expected in expected_by_skill.items():
+        content = (ROOT / "skills" / name / "SKILL.md").read_text(encoding="utf-8")
+        start_marker = "<!-- capability-routes:start -->"
+        end_marker = "<!-- capability-routes:end -->"
+        start = content.find(start_marker)
+        end = content.find(end_marker)
+        if start < 0 or end <= start:
+            fail(f"{name} lacks a valid controlled capability route block")
+        rows = []
+        for line in content[start:end].splitlines():
+            line = line.strip()
+            if not line.startswith("|") or "User outcome" in line or line == "| --- | --- |":
+                continue
+            cells = [cell.strip() for cell in line.strip("|").split("|")]
+            if len(cells) != 2:
+                fail(f"{name} has malformed capability route row: {line}")
+            outcome, route_cell = cells
+            if route_cell.startswith("MCP `") and route_cell.endswith("`"):
+                surface, route = "mcp", route_cell[5:-1]
+            elif route_cell.startswith("`") and route_cell.endswith("`"):
+                surface, route = "cli", route_cell[1:-1]
+            else:
+                fail(f"{name} has unsupported capability route: {route_cell}")
+            rows.append({"skill": name, "outcome": outcome, "surface": surface, "route": route})
+        projected = [{key: item[key] for key in ("skill", "outcome", "surface", "route")} for item in expected]
+        if rows != projected:
+            fail(f"{name} capability routes do not match the checked-in registry fixture")
+
+
+def validate_binaries():
+    binary_root = ROOT / ".codex-plugin" / "bin"
+    actual = sorted(path.name for path in binary_root.iterdir() if path.is_file())
+    if actual != sorted(TARGETS):
+        fail(f"prepared runtime set is invalid: {actual}")
+    for name in TARGETS:
+        path = binary_root / name
+        if path.stat().st_size == 0:
+            fail(f"prepared runtime is empty: {name}")
+        if not name.endswith(".exe") and not path.stat().st_mode & stat.S_IXUSR:
+            fail(f"prepared runtime is not executable: {name}")
+
+
+def sha256(path):
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def validate_runtime_manifest():
+    plugin_path = ROOT / ".codex-plugin" / "plugin.json"
+    plugin = json.loads(plugin_path.read_text(encoding="utf-8"))
+    path = ROOT / ".codex-plugin" / "runtime-manifest.json"
+    manifest = json.loads(path.read_text(encoding="utf-8"))
+    if set(manifest) != {"schema_version", "version", "plugin", "resources", "sha256"}:
+        fail("runtime manifest shape is invalid")
+    if manifest.get("schema_version") != 1 or manifest.get("version") != plugin.get("version"):
+        fail("runtime manifest version is invalid")
+    expected_plugin = {
+        "name": "ocean-watch",
+        "version": plugin.get("version"),
+        "sha256": sha256(plugin_path),
+    }
+    if manifest.get("plugin") != expected_plugin:
+        fail("runtime manifest plugin identity is invalid")
+    resources = {
+        ".mcp.json": ROOT / ".mcp.json",
+        ".claude-plugin/plugin.json": ROOT / ".claude-plugin" / "plugin.json",
+        "package.json": ROOT / "package.json",
+        "harness/index.mjs": ROOT / "harness" / "index.mjs",
+        "harness/config.mjs": ROOT / "harness" / "config.mjs",
+        "harness/cordis.patch.yml": ROOT / "harness" / "cordis.patch.yml",
+        "f2/resolve.py": ROOT / "f2" / "resolve.py",
+        "bin/ocean-watch-launcher": ROOT / "bin" / "ocean-watch-launcher",
+    }
+    for resource in sorted((ROOT / "skills").rglob("*")):
+        if resource.is_symlink():
+            fail(f"plugin Host resource must not be a symlink: {resource.relative_to(ROOT)}")
+        if resource.is_file():
+            resources[resource.relative_to(ROOT).as_posix()] = resource
+    expected_resources = {name: sha256(resource) for name, resource in resources.items()}
+    if manifest.get("resources") != expected_resources:
+        fail("runtime manifest resource hashes are invalid")
+    expected_binaries = {
+        name: sha256(ROOT / ".codex-plugin" / "bin" / name) for name in TARGETS
+    }
+    if manifest.get("sha256") != expected_binaries:
+        fail("runtime manifest binary hashes are invalid")
+
+
+def validate_fast_routing_has_no_legacy_conflicts():
+    ads_reference = (ROOT / "skills" / "ads-plan-monitor" / "references" / "workflow-reference.md").read_text(encoding="utf-8")
+    qc_reference = (ROOT / "skills" / "qc-plan-monitor" / "references" / "workflow-reference.md").read_text(encoding="utf-8")
+    if "Run `accounts list` during the current turn" in ads_reference:
+        fail("Marketing workflow reference retains the legacy responsible-account route")
+    if "install Python and reopen Codex" in qc_reference:
+        fail("Qianchuan workflow reference retains the legacy client-restart requirement")
+
+
+def validate_single_business_runtime():
+    forbidden = (
+        ROOT / "skills" / "ads-plan-monitor" / "src",
+        ROOT / ".venv",
+    )
+    present = [str(path.relative_to(ROOT)) for path in forbidden if path.exists()]
+    if present:
+        fail(f"legacy Python business runtime is present: {present}")
+
+
+def validate_removed_compatibility_paths():
+    forbidden_commands = (
+        '"auth", "migrate"',
+        '"templates", "migrate"',
+        '"qc-templates", "migrate"',
+        '"qc-templates", "migrate-live"',
+    )
+    commands = (ROOT / "runtime" / "ocean-watch-go" / "internal" / "contracts" / "commands.go").read_text()
+    present = [command for command in forbidden_commands if command in commands]
+    if present:
+        fail(f"removed compatibility command is registered: {present}")
+    forbidden_roots = (
+        ROOT / "artifacts",
+        ROOT / "logs",
+        ROOT / "runs",
+        ROOT / "prototype",
+        ROOT / "build",
+        ROOT / "dist",
+        ROOT / "runtime" / "ocean-watch-go" / "artifacts",
+    )
+    present_roots = [str(path.relative_to(ROOT)) for path in forbidden_roots if path.exists()]
+    if present_roots:
+        fail(f"legacy generated directory is present: {present_roots}")
+
+
+def main():
+    try:
+        validate_manifest()
+        validate_claude_manifest()
+        validate_harness_manifest()
+        validate_mcp()
+        validate_skill("ads-plan-monitor")
+        validate_skill("qc-plan-monitor")
+        validate_skill("xt-plan-monitor")
+        validate_capability_routes()
+        validate_binaries()
+        validate_runtime_manifest()
+        validate_fast_routing_has_no_legacy_conflicts()
+        validate_single_business_runtime()
+        validate_removed_compatibility_paths()
+    except (OSError, ValueError, RuntimeError, yaml.YAMLError) as error:
+        print(f"distribution validation failed: {error}", file=sys.stderr)
+        return 1
+    print("distribution validation passed")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "runs": [
+    {
+      "industry_slug": "civil-service-exam-prep",
+      "date": "2026-05-27T10:20:49Z",
+      "gate_verdict": "accept",
+      "gate_score": 0.9,
+      "metrics": {
+        "industry_slug": "civil-service-exam-prep",
+        "gate_verdict": "accept",
+        "gate_score": 0.9,
+        "quality_check_verdict": "PASS",
+        "quality_check_counts": {
+          "pass": 15,
+          "partial": 2,
+          "fail": 0
+        },
+        "source_count": 171,
+        "primary_ratio": 0.6,
+        "tracks": 6,
+        "mental_models": 7,
+        "playbook_rules": 10,
+        "agentic_dims": 7,
+        "slow_update_regions": 3,
+        "critical_fails": [],
+        "lessons": [
+          "Track 03 (workflows) socket error on first attempt - incremental save strategy fixes it",
+          "quality_check item 6 (workflow diffs) needs ### subsections not ** bold format",
+          "validation_gate.py had wrong function name for agentic_protocol check - fixed"
+        ]
+      },
+      "skill_dir": "skill/prototypes/civil-service-exam-prep-master/output"
+    }
+  ],
+  "lessons": [
+    {
+      "date": "2026-05-27T10:20:49Z",
+      "industry_slug": "civil-service-exam-prep",
+      "lesson": "Track 03 (workflows) socket error on first attempt - incremental save strategy fixes it"
+    },
+    {
+      "date": "2026-05-27T10:20:49Z",
+      "industry_slug": "civil-service-exam-prep",
+      "lesson": "quality_check item 6 (workflow diffs) needs ### subsections not ** bold format"
+    },
+    {
+      "date": "2026-05-27T10:20:49Z",
+      "industry_slug": "civil-service-exam-prep",
+      "lesson": "validation_gate.py had wrong function name for agentic_protocol check - fixed"
+    }
+  ]
+}

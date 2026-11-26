@@ -1,0 +1,31 @@
+{
+  "name": "ocean-watch",
+  "version": "3.0.0-alpha.1+codex.release-20261108-alpha1",
+  "description": "Claude Code plugin for Ocean Engine OAuth, responsible-account reporting, plan operations, performance reporting, and monitoring analysis. Includes a dedicated Star Map authorization and account-management Skill.",
+  "author": {
+    "name": "westng",
+    "url": "https://github.com/westng"
+  },
+  "homepage": "https://github.com/westng/ocean-watch",
+  "repository": "https://github.com/westng/ocean-watch",
+  "license": "MIT",
+  "keywords": [
+    "claude-code",
+    "ocean-engine",
+    "advertising",
+    "campaign-monitoring"
+  ],
+  "skills": "./skills",
+  "mcpServers": {
+    "ocean-watch": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/bin/ocean-watch-launcher",
+      "args": [
+        "mcp",
+        "proxy",
+        "--stdio",
+        "--plugin-root",
+        "${CLAUDE_PLUGIN_ROOT}"
+      ]
+    }
+  }
+}

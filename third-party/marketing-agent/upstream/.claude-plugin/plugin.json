@@ -1,0 +1,34 @@
+{
+  "name": "gomarble",
+  "displayName": "GoMarble",
+  "version": "0.2.0",
+  "description": "GoMarble's paid media agent inside Claude. Connect Meta, Google, TikTok, LinkedIn and Microsoft Ads with GA4, Shopify, Klaviyo and Search Console, then ask what changed and why. Diagnose performance, analyze winning creative, research competitor ads, write creative briefs, cut wasted spend, shift budget, launch and edit Meta and Google campaigns, build reports, and set up agents that watch your accounts on a schedule. Changes are proposed first and applied only after you approve them, within your team's roles and per-account access. 60 skills built on GoMarble's own playbooks. Connects to GoMarble's remote MCP server with an OAuth sign-in.",
+  "author": {
+    "name": "GoMarble",
+    "url": "https://www.gomarble.ai"
+  },
+  "homepage": "https://www.gomarble.ai/mcp",
+  "repository": "https://github.com/gomarble-ai/marketing-agent",
+  "icon": "./assets/icon.png",
+  "documentationUrl": "https://github.com/gomarble-ai/marketing-agent#readme",
+  "supportUrl": "https://github.com/gomarble-ai/marketing-agent/issues",
+  "privacyPolicyUrl": "https://www.gomarble.ai/privacy",
+  "termsOfServiceUrl": "https://www.gomarble.ai/terms",
+  "license": "MIT",
+  "keywords": [
+    "paid-media",
+    "performance-marketing",
+    "meta-ads",
+    "google-ads",
+    "tiktok-ads",
+    "linkedin-ads",
+    "microsoft-ads",
+    "creative-analytics",
+    "competitor-research",
+    "campaign-management",
+    "marketing-agents",
+    "shopify",
+    "ga4",
+    "klaviyo"
+  ]
+}

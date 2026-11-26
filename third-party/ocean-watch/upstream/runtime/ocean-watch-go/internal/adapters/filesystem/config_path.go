@@ -1,0 +1,111 @@
+package filesystem
+
+import (
+	"os"
+	"path/filepath"
+)
+
+const (
+	ConfigEnv         = "ADS_PLAN_MONITOR_CONFIG"
+	StateHomeEnv      = "OCEAN_WATCH_HOME"
+	CodexHomeEnv      = "CODEX_HOME"
+	ManagedRuntimeEnv = "OCEAN_WATCH_MANAGED_RUNTIME"
+)
+
+// StateHome resolves the single local state root shared by every supported
+// plugin host. Codex and Claude Code deliberately read and write the same
+// root so one OAuth authorization serves both: an official refresh response
+// replaces the stored refresh token, so per-host roots would let each host
+// invalidate the other's credential.
+func StateHome(getenv func(string) string, userHome string) string {
+	if value := getenv(StateHomeEnv); value != "" {
+		return value
+	}
+	if value := getenv(CodexHomeEnv); value != "" {
+		return value
+	}
+	return filepath.Join(userHome, ".codex")
+}
+
+// CodexHome preserves the original name used by existing call sites.
+func CodexHome(getenv func(string) string, userHome string) string {
+	return StateHome(getenv, userHome)
+}
+
+func ResolveConfigPath(explicit, cwd string, getenv func(string) string, userHome string) string {
+	if explicit != "" {
+		return expandHome(explicit, userHome)
+	}
+	if value := getenv(ConfigEnv); value != "" {
+		return expandHome(value, userHome)
+	}
+	if getenv(ManagedRuntimeEnv) == "1" {
+		return filepath.Join(CodexHome(getenv, userHome), "ads-plan-monitor", "config.json")
+	}
+	for root := cwd; root != filepath.Dir(root); root = filepath.Dir(root) {
+		manifest := filepath.Join(root, ".codex-plugin", "plugin.json")
+		project := filepath.Join(root, "config", "ads-plan-monitor", "config.json")
+		if fileExists(manifest) && fileExists(project) {
+			return project
+		}
+	}
+	return filepath.Join(CodexHome(getenv, userHome), "ads-plan-monitor", "config.json")
+}
+
+func ResolveInitializationConfigPath(
+	explicit string,
+	homeConfig bool,
+	cwd string,
+	getenv func(string) string,
+	userHome string,
+) string {
+	if homeConfig {
+		return filepath.Join(CodexHome(getenv, userHome), "ads-plan-monitor", "config.json")
+	}
+	if explicit != "" {
+		return expandHome(explicit, userHome)
+	}
+	if value := getenv(ConfigEnv); value != "" {
+		return expandHome(value, userHome)
+	}
+	if getenv(ManagedRuntimeEnv) == "1" {
+		return filepath.Join(CodexHome(getenv, userHome), "ads-plan-monitor", "config.json")
+	}
+	for root := cwd; ; root = filepath.Dir(root) {
+		if fileExists(filepath.Join(root, ".codex-plugin", "plugin.json")) {
+			return filepath.Join(root, "config", "ads-plan-monitor", "config.json")
+		}
+		parent := filepath.Dir(root)
+		if parent == root {
+			break
+		}
+	}
+	return filepath.Join(CodexHome(getenv, userHome), "ads-plan-monitor", "config.json")
+}
+
+func ResolvePluginRoot(cwd string) string {
+	for root := cwd; ; root = filepath.Dir(root) {
+		if fileExists(filepath.Join(root, ".codex-plugin", "plugin.json")) {
+			return root
+		}
+		parent := filepath.Dir(root)
+		if parent == root {
+			return ""
+		}
+	}
+}
+
+func expandHome(path, userHome string) string {
+	if path == "~" {
+		return userHome
+	}
+	if len(path) > 2 && path[:2] == "~/" {
+		return filepath.Join(userHome, path[2:])
+	}
+	return filepath.Clean(path)
+}
+
+func fileExists(path string) bool {
+	info, err := os.Stat(path)
+	return err == nil && info.Mode().IsRegular()
+}
